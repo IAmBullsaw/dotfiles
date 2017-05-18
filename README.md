@@ -7,6 +7,7 @@ Needs to be run from this folder(as in the cloned repository folder).
 
 # init.el
 [What is emacs?](https://www.gnu.org/software/emacs/)
+
 Before switching to spacemacs this was my emacs config.
 
 # .spacemacs
