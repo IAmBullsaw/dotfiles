@@ -15,11 +15,12 @@ Before switching to spacemacs this was my emacs config.
 
 Settings:
 * shell default pos: bottom
-* shell defaulhttp://spacemacs.org/t height: 30
-* remove whitespaces: trailing
+* shell default height: 30
+* remove trailing whitespace on save
+* Relative line numbers
+* Maximize on startup
 
-
-layers added:
+Layers added:
 * ivy
 * auto-completion
 * emacs-lisp
