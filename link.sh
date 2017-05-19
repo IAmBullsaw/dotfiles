@@ -11,7 +11,12 @@ if [ "$answer" == "s" ]; then
         printf "linking. "
         ln -s "`pwd`/.spacemacs" $SPACEMACS
     else
-        printf "OK\n"
+        read -n 1 -p "Want to remove old config? (y/n):" answer
+        if [ "$answer" == y ]; then
+            rm $SPACEMACS
+            printf "linking. "
+            ln -s "`pwd`/.spacemacs" $SPACEMACS
+        fi
     fi
 elif [ "$answer" == "e" ]; then
     printf "[.emacs] "
