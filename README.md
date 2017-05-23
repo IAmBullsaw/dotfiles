@@ -19,6 +19,7 @@ Settings:
 * remove trailing whitespace on save
 * Relative line numbers
 * Maximize on startup
+* finer undo (do not undo one whole insert)
 
 Layers added:
 * ivy
