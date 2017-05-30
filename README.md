@@ -20,6 +20,7 @@ Settings:
 * Relative line numbers
 * Maximize on startup
 * finer undo (do not undo one whole insert)
+* When in spacemacs buffer, clicking on latest file does not yank whatever into the newly opened buffer. (What a feature...)
 
 Layers added:
 * ivy
