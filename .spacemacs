@@ -312,6 +312,9 @@ explicitly specified that a variable should be set before a package is loaded,
 you should place your code here."
   ;; for making undo not remove one whole insert which is truly horrible.
   (setq evil-want-fine-undo t)
+  ;; according to link below, fixing the auto yank into buffer on click
+  ;; https://github.com/syl20bnr/spacemacs/issues/5435
+  (add-hook 'spacemacs-buffer-mode-hook (lambda () (set (make-local-variable 'mouse-1-click-follows-link) nil)))
   )
 
 ;; Do not write anything past this comment. This is where Emacs will
