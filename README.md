@@ -13,6 +13,13 @@ Before switching to spacemacs this was my emacs config.
 # .spacemacs
 [What is spacemacs?](http://spacemacs.org/)
 
+
+Theme:
+* flatland <- default
+* sanityinc-solarized-dark
+* sanityinc-solarized-light
+* spacemacs-dark
+
 Settings:
 * shell default pos: bottom
 * shell default height: 30
