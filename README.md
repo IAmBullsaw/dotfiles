@@ -38,3 +38,4 @@ Layers added:
 * syntax-checking
 * version-control
 * c-c++
+* themes-megapack
