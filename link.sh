@@ -12,7 +12,7 @@ if [ "$answer" == "s" ]; then
         printf "[$PRE] linking.\n"
         ln -s "`pwd`/.spacemacs" $SPACEMACS
     else
-        read -n 1 -p "[$PRE] Want to remove old config? (y/n):" answer
+        read -n 1 -p "[$PRE] Want to remove old config? (y/n): " answer
         printf "\n"
         if [ "$answer" == y ]; then
             rm $SPACEMACS
@@ -21,7 +21,7 @@ if [ "$answer" == "s" ]; then
             ln -s "`pwd`/.spacemacs" $SPACEMACS
         fi
     fi
-    read -n 1 -p "Want a spacemacs desktop icon? (y/n)" answer
+    read -n 1 -p "[$PRE] Want a spacemacs desktop icon? (y/n): " answer
     printf "\n"
     if ["$answer" == "y"]; then
         ln -s "`pwd`/desktop/spacemacs.desktop" "$APPLICATIONS/spacemacs.desktop"
