@@ -24,7 +24,7 @@ if [ "$answer" == "s" ]; then
     read -n 1 -p "Want a spacemacs desktop icon? (y/n)" answer
     printf "\n"
     if ["$answer" == "y"]; then
-        ln -s "`pwd`/spacemacs.desktop" "$APPLICATIONS/spacemacs.desktop"
+        ln -s "`pwd`/desktop/spacemacs.desktop" "$APPLICATIONS/spacemacs.desktop"
     fi
     printf "[$PRE] done\n"
 elif [ "$answer" == "e" ]; then
