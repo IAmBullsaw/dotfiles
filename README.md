@@ -13,6 +13,13 @@ Before switching to spacemacs this was my emacs config.
 # .spacemacs
 [What is spacemacs?](http://spacemacs.org/)
 
+
+Theme:
+* flatland <- default
+* sanityinc-solarized-dark
+* sanityinc-solarized-light
+* spacemacs-dark
+
 Settings:
 * shell default pos: bottom
 * shell default height: 30
@@ -20,6 +27,7 @@ Settings:
 * Relative line numbers
 * Maximize on startup
 * finer undo (do not undo one whole insert)
+* When in spacemacs buffer, clicking on latest file does not yank whatever into the newly opened buffer. (What a feature...)
 
 Layers added:
 * ivy
@@ -30,3 +38,4 @@ Layers added:
 * syntax-checking
 * version-control
 * c-c++
+* themes-megapack
