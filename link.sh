@@ -1,5 +1,6 @@
 #/bin/bash
 SPACEMACS=~/.spacemacs
+APPLICATIONS=~/.local/share/applications
 EMACS=~/.emacs.d/init.el
 
 printf "Choose your editor:\n\n"
@@ -19,6 +20,11 @@ if [ "$answer" == "s" ]; then
             printf "[$PRE] linking. \n"
             ln -s "`pwd`/.spacemacs" $SPACEMACS
         fi
+    fi
+    read -n 1 -p "Want a spacemacs desktop icon? (y/n)" answer
+    printf "\n"
+    if ["$answer" == "y"]; then
+        ln -s "`pwd`/spacemacs.desktop" "$APPLICATIONS/spacemacs.desktop"
     fi
     printf "[$PRE] done\n"
 elif [ "$answer" == "e" ]; then
