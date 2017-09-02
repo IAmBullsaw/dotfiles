@@ -318,6 +318,9 @@ you should place your code here."
   ;; according to link below, fixing the auto yank into buffer on click
   ;; https://github.com/syl20bnr/spacemacs/issues/5435
   (add-hook 'spacemacs-buffer-mode-hook (lambda () (set (make-local-variable 'mouse-1-click-follows-link) nil)))
+  ;; for making {} life easier
+  (global-set-key (kbd "C-ö") (kbd "{") )
+  (global-set-key (kbd "C-ä") (kbd "}") )
   )
 
 ;; Do not write anything past this comment. This is where Emacs will
