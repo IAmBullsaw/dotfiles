@@ -20,6 +20,9 @@ Theme:
 * sanityinc-solarized-light
 * spacemacs-dark
 
+Theme overrides:
+* line numbers are red.
+
 Settings:
 * shell default pos: bottom
 * shell default height: 30
