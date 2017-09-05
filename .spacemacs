@@ -321,6 +321,7 @@ you should place your code here."
   ;; for making {} life easier
   (global-set-key (kbd "C-ö") (kbd "{") )
   (global-set-key (kbd "C-ä") (kbd "}") )
+  (set-face-foreground 'linum "red")
   )
 
 ;; Do not write anything past this comment. This is where Emacs will
