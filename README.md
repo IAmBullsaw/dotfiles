@@ -5,6 +5,9 @@ These are my dotfiles. Well, more like dotfile.
 A small script that links all dotfiles in the correct places.
 Needs to be run from this folder(as in the cloned repository folder).
 
+# .bash_aliases
+These are the most common aliases I use for bash. Yay.
+
 # init.el
 [What is emacs?](https://www.gnu.org/software/emacs/)
 
