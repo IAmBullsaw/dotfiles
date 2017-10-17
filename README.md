@@ -34,6 +34,7 @@ Settings:
 * Maximize on startup
 * finer undo (do not undo one whole insert)
 * When in spacemacs buffer, clicking on latest file does not yank whatever into the newly opened buffer. (What a feature...)
+* fly-check for g++ and clang is c++17
 
 Keyboard bindings:
 * C-ö C-ä makes curly braces {} respectively. (Very nice on nordic keyboard layout)
