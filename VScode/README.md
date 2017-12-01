@@ -8,3 +8,10 @@ Files are within subdirectory /VScode
 * Disable annoying neovim message
 * Don't ignore extension recommendations
 * Format on save
+
+## extensions
+List of extensions created with 
+```
+    code --list-extensions > extensions
+```
+used in install script
