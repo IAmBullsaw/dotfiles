@@ -3,7 +3,13 @@
 ###################
 # START OF SETTINGS
 #
-SRCDIR=`pwd`
+# Which file are we linking?
+FILE=.bash_aliases
+#
+# Which file to link to
+DESTINATION=~/.bash_aliases
+SRCDIRECTORY=`pwd`
+#
 # Read about the different levels at https://en.wikipedia.org/wiki/Syslog#Severity_level
 # Verbosity should start at 5
 VERBOSE=5
@@ -16,31 +22,25 @@ function usage() {
 }
 
 declare -A LOG_LEVELS
-LOG_LEVELS=([0]="..emerg" [1]="..alert" [2]="...crit" [3]="....err" [4]="warning" [5]=".notice" [6]="...info" [7]="..debug")
+LOG_LEVELS=([0]="emerg" [1]="alert" [2]="crit" [3]="err" [4]="warning" [5]="notice" [6]="info" [7]="debug")
 function .log () {
     local LEVEL=${1}
     shift
     if [ ${VERBOSE} -ge ${LEVEL} ]; then
-        echo "-> [${LOG_LEVELS[$LEVEL]}]" "[$0]" "$@"
+        echo "-> [${LOG_LEVELS[$LEVEL]}]" "[$FILE]" "$@"
     fi
 }
 
 function help() {
-    echo "Help for dotfiles.sh"
+    echo "Help for bash/link.sh"
     echo ""
     echo "USAGE
                   `usage`
                   User MUST declare the purpose with flags -i or -u."
     echo ""
     echo "OPTIONS
-                  -i If you want to install the listed configs.
-                  -u If you want to uninstall the listed configs.
-                  -a For ALL configs.
-                  -A For ALL configs and ALL extra.
-                  -e For init.el
-                  -s For spacemacs config.
-                  -S For spacemacs config AND spacemacs desktop icon.
-                  -b For .bash_aliases
+                  -i If you want to install this .bash_aliases config
+                  -u If you want to uninstall this .bash_aliases config
                   -F Use force. Think about it.
                   -h Print this 'help'.
                   -v Increases the verbosity of the process."
@@ -51,7 +51,33 @@ function help() {
 # Don't edit past this point unless you are super cool. You're super cool? Go ahead!
 
 function install() {
-    .log 0 "Not implemented"
+    if [ ! -f $DESTINATION ]; then
+        .log 7 "ln -s $SRCDIRECTORY/$FILE $DESTINATION"
+        ln -s "$SRCDIRECTORY/$FILE" $DESTINATION
+        .log 5 "linked"
+    else
+        read -n 1 -p "[$FILE] Want to remove old config? (y/n): " answer
+        printf "\n"
+        if [ "$answer" == y ]; then
+            uninstall;
+            .log 7 "ln -s $SRCDIRECTORY/$FILE $DESTINATION"
+            ln -s "$SRCDIRECTORY/$FILE" $DESTINATION
+            .log 5 "linked"
+        fi
+    fi
+}
+
+function uninstall() {
+    .log 7 "rm $DESTINATION"
+    rm $DESTINATION
+    .log 5 "removed config"
+}
+
+function reload() {
+    .log 7 ". $DESTINATION"
+    . $DESTINATION;
+    .log 5 "reloaded"
+    .log 6 "You might want to restart or run '. ~/.bashrc' in all active bash instances"
 }
 
 ##################
@@ -61,14 +87,8 @@ function install() {
 [ $# -gt 0 ] || { usage; exit 0; }
 
 # Get options
-while getopts 'bsSeaAhFiuv' flag; do
+while getopts 'hFiuv' flag; do
     case "${flag}" in
-        a) ALL=true ;;
-        A) { ALL=true; ALLEXTRA=true; } ;;
-        e) EMACS=true ;;
-        s) SPACEMACS=true ;;
-        S) { SPACEMACS=true; SPACEEXTRA=true; } ;;
-        b) BASHALIASES=true ;;
         i) INSTALL=true ;;
         u) UNINSTALL=true ;;
         F) FORCE=true ;;
@@ -83,10 +103,6 @@ if [ $HELP ]; then
     exit 0;
 fi
 
-.log 0 "Not implemented"
-.log 0 "Use folder scripts instead"
-exit -1;
-
 if [ $INSTALL ] && [ $UNINSTALL ]; then
     echo "User provided both -i and -u."
     usage;
@@ -97,6 +113,7 @@ fi
 
 if [ $INSTALL ]; then
     install;
+    reload;
 fi
 
 if [ $UNINSTALL ]; then
