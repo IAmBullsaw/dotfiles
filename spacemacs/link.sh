@@ -12,7 +12,7 @@ DESTINATION=~/.spacemacs
 APPLICATIONS=~/.local/share/applications
 SRCDIRECTORY=`pwd`
 #
-# Reade about the different levels at https://en.wikipedia.org/wiki/Syslog#Severity_level
+# Read about the different levels at https://en.wikipedia.org/wiki/Syslog#Severity_level
 # Verbosity should start at 5
 VERBOSE=5
 #
@@ -105,7 +105,7 @@ function uninstallDesktopIcon() {
 # MAIN SCRIPT FLOW
 
 # User must provide arguments
-[ $# -gt 0 ] || ( usage )
+[ $# -gt 0 ] || { usage; exit 0; }
 
 # Get options
 while getopts 'dhFiuv' flag; do
@@ -130,6 +130,8 @@ if [ $INSTALL ] && [ $UNINSTALL ]; then
     usage;
     exit -1;
 fi
+
+.log 5 "started"
 
 if [ $INSTALL ]; then
     install;
