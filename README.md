@@ -14,10 +14,10 @@ A smaller script meant to check if there's been any changes in the dotfiles and 
 * [Spacemacs](#.spacemacs)
 * [Visual Studio Code](#Visual Studio Code)
 
-# .bash_aliases
+## .bash_aliases
 These are the most common aliases I use for bash.
 
-# init.el
+## init.el
 [What is emacs?](https://www.gnu.org/software/emacs/)
 
 Before switching to spacemacs this was my emacs config.
@@ -60,3 +60,5 @@ Layers added:
 
 
 ## Visual Studio Code
+Yes. Placeholder information: This is fun.
+*
