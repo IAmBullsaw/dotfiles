@@ -10,6 +10,7 @@ FILE=VScode
 # Which files to link to
 DESTDIRECTORY=~/.config/Code/User
 SRCDIRECTORY=`pwd`
+EXTENSIONFILE="$SRCDIRECTORY/extensions"
 #
 # Read about the different levels at https://en.wikipedia.org/wiki/Syslog#Severity_level
 # Verbosity should start at 5
@@ -44,7 +45,9 @@ function help() {
                   -u If you want to uninstall
                   -s If you want settings.json
                   -k If you want keybindings.json
-                  -a If you want all.
+                  -a If you want both configs.
+                  -e If you want the extensions.
+                  -A If you want both configs AND the extensions.
                   -F Use force. Think about it.
                   -h Print this 'help'.
                   -v Increases the verbosity of the process."
@@ -90,6 +93,44 @@ function uninstall() {
     done
 }
 
+function installExtensions() {
+    while read L
+    do
+        FILE="$L"
+        .log 7 "code --install-extension $FILE"
+        .log 5 "installing ... "
+        code --install-extension "$FILE" &> /dev/null && .log 5 "installed." || { .log 4 "failed."; .log 7 "rerun the command for reasons why: code --install-extension $FILE"; }
+    done < $EXTENSIONFILE
+    FILE="VScode"
+    .log 7 "no more extensions ..."
+}
+
+function uninstallExtensions() {
+    LIST=`code --list-extensions`
+    if [ ! "$LIST" ]; then
+        .log 5 "No extensions installed."
+    else
+        while read E
+        do
+            FILE="$E"
+            .log 7 "code --uninstall-extension $FILE"
+            .log 5 "uninstalling... "
+            code --uninstall-extension "$FILE" &> /dev/null && .log 5 "uninstalled."
+        done <<< "$LIST"
+        FILE="VScode"
+        .log 7 "no more extensions ..."
+    fi
+}
+
+function checkIfCodeIsInstalled() {
+    CODE=`command -v code`
+    if [ ! "$CODE" ]; then
+        .log 3 "command 'code' is not installed, can't automagically install extensions."
+        .log 3 "Exiting ..."
+        exit -2;
+    fi
+}
+
 ##################
 # MAIN SCRIPT FLOW
 
@@ -97,11 +138,13 @@ function uninstall() {
 [ $# -gt 0 ] || { usage; exit 0; }
 
 # Get options
-while getopts 'skahFiuv' flag; do
+while getopts 'AeskahFiuv' flag; do
     case "${flag}" in
         s) FILES[0]="settings.json" ;;
         k) FILES[1]="keybindings.json" ;;
         a) { FILES[0]="settings.json"; FILES[1]="keybindings.json"; } ;;
+        e) EXTENSIONS=true ;;
+        A) { FILES[0]="settings.json"; FILES[1]="keybindings.json"; EXTENSIONS=true; } ;;
         i) INSTALL=true ;;
         u) UNINSTALL=true ;;
         F) FORCE=true ;;
@@ -126,10 +169,22 @@ fi
 
 if [ $INSTALL ]; then
     install;
+    if [ $EXTENSIONS ]; then
+        checkIfCodeIsInstalled;
+        installExtensions;
+    fi
 fi
 
 if [ $UNINSTALL ]; then
     uninstall;
+    if [ $EXTENSIONS ]; then
+        read -n 1 -p "-> [${LOG_LEVELS[1]}] [Extensions] This will uninstall all extensions, continue? (y/n): " answer
+        printf "\n"
+        if [ "$answer" == y ]; then
+            checkIfCodeIsInstalled;
+            uninstallExtensions;
+        fi
+    fi
 fi
 
 FILE="VScode"
