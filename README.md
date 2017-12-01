@@ -1,21 +1,28 @@
 # dotfiles
 These are my dotfiles. Well, more like dotfile.
 
-# link.sh
+## link.sh
 A small script that links all dotfiles in the correct places.
 Needs to be run from this folder(as in the cloned repository folder).
 
-# init.el
+## update.sh
+A smaller script meant to check if there's been any changes in the dotfiles and if so, pull the latest from the git repository.
+
+# the dotfiles:
+* [Emacs](#init.el)
+* [Spacemacs](#.spacemacs)
+* [Visual Studio Code](#Visual Studio Code)
+
+## init.el
 [What is emacs?](https://www.gnu.org/software/emacs/)
 
 Before switching to spacemacs this was my emacs config.
 
-# .spacemacs
+## .spacemacs
 [What is spacemacs?](http://spacemacs.org/)
 
-
 Theme:
-* flatland <- default
+* flatland (The default theme)
 * sanityinc-solarized-dark
 * sanityinc-solarized-light
 * spacemacs-dark
@@ -46,3 +53,6 @@ Layers added:
 * version-control
 * c-c++
 * themes-megapack
+
+
+## Visual Studio Code
