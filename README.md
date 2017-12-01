@@ -1,18 +1,21 @@
 # dotfiles
-These are my dotfiles. Well, more like dotfile.
+These are my dotfiles; Information about each can be found in their part of this readme.
 
-## link.sh
-A small script that links all dotfiles in the correct places.
-Needs to be run from this folder(as in the cloned repository folder).
-
-## update.sh
-A smaller script meant to check if there's been any changes in the dotfiles and if so, pull the latest from the git repository.
-
-# the dotfiles:
 * [Bash](#bash_aliases)
 * [Emacs](#initel)
 * [Spacemacs](#spacemacs)
 * [Visual Studio Code](#visual-studio-code)
+
+# scripts
+These scripts are meant to aid with installation of relevant dotfiles.
+Options and examples are found by running the scripts with the "-h" flag. ( Or you know, read the bash scrpt ^^)
+
+## link.sh
+Links all dotfiles in the correct places.
+Needs to be run from this folder(as in the cloned repository folder).
+
+## update.sh
+A smaller script meant to check if there's been any changes in the dotfiles git repo and if so, pull the latest from the git repository.
 
 ## .bash_aliases
 These are the most common aliases I use for bash.
