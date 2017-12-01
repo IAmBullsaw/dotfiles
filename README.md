@@ -9,10 +9,10 @@ Needs to be run from this folder(as in the cloned repository folder).
 A smaller script meant to check if there's been any changes in the dotfiles and if so, pull the latest from the git repository.
 
 # the dotfiles:
-* [Bash](#.bash_aliases)
-* [Emacs](#init.el)
-* [Spacemacs](#.spacemacs)
-* [Visual Studio Code](#Visual Studio Code)
+* [Bash](#bash_aliases)
+* [Emacs](#initel)
+* [Spacemacs](#spacemacs)
+* [Visual Studio Code](#visual-studio-code)
 
 ## .bash_aliases
 These are the most common aliases I use for bash.
@@ -58,7 +58,13 @@ Layers added:
 * c-c++
 * themes-megapack
 
-
 ## Visual Studio Code
-Yes. Placeholder information: This is fun.
-*
+Files are within subdirectory /VScode
+
+### keybindings.json
+* C-ö C-ä makes curly braces {} respectively.
+
+### settings.json
+* Disable annoying neovim message
+* Don't ignore extension recommendations
+* Format on save
