@@ -77,7 +77,10 @@ function uninstall() {
 }
 
 function installDesktopIcon() {
+    NAME=`whoami`
     if [ $DESKTOPICON ]; then
+        .log 7 "replacing Icon=path in desktop"
+        sed -i "/Icon=/c\Icon=/home/$NAME/.emacs.d/core/banners/img/spacemacs.png" "$SRCDIRECTORY/desktop/$DESKTOPFILE"
         if [ ! -f "$APPLICATIONS/$DESKTOPFILE" ]; then
             .log 7 "ln -s $SRCDIRECTORY/desktop/$DESKTOPFILE $APPLICATIONS/$DESKTOPFILE"
             ln -s "$SRCDIRECTORY/desktop/$DESKTOPFILE" "$APPLICATIONS/$DESKTOPFILE"
