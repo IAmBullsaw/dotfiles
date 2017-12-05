@@ -41,6 +41,7 @@ function help() {
     echo "OPTIONS
                   -i If you want to install this .bash_aliases config
                   -u If you want to uninstall this .bash_aliases config
+                  -s If you want all scripts linked in /usr/local/bin/.
                   -F Use force. Think about it.
                   -h Print this 'help'.
                   -v Increases the verbosity of the process."
@@ -68,9 +69,13 @@ function install() {
 }
 
 function uninstall() {
-    .log 7 "rm $DESTINATION"
-    rm $DESTINATION
-    .log 5 "removed config"
+    if [ -e $DESTINATION ]; then
+        .log 7 "rm $DESTINATION"
+        rm $DESTINATION
+        .log 5 "removed config"
+    else
+        .log 5 "wont uninstall: doesn't exist"
+    fi
 }
 
 function reload() {
@@ -80,6 +85,32 @@ function reload() {
     .log 6 "You might want to restart or run '. ~/.bashrc' in all active bash instances"
 }
 
+function installScripts() {
+    cd scripts/
+    for FILE in *; do
+        if [ ! -e "/usr/local/bin/${FILE%%.*}" ]; then
+            ln -s "`pwd`/$FILE" "/usr/local/bin/${FILE%%.*}"
+            .log 5 "linked as ${FILE%%.*}"
+        else
+            .log 5 "won't link: already exists"
+        fi
+    done
+    cd ..
+}
+
+function uninstallScripts() {
+    cd scripts/
+    for FILE in *; do
+        if [ -e "/usr/local/bin/${FILE%%.*}" ]; then
+            rm "/usr/local/bin/${FILE%%.*}"
+            .log 5 "removed ${FILE%%.*}"
+        else
+            .log 5 "won't remove: doesn't exist"
+        fi
+    done
+    cd ..
+}
+
 ##################
 # MAIN SCRIPT FLOW
 
@@ -87,10 +118,11 @@ function reload() {
 [ $# -gt 0 ] || { usage; exit 0; }
 
 # Get options
-while getopts 'hFiuv' flag; do
+while getopts 'shFiuv' flag; do
     case "${flag}" in
         i) INSTALL=true ;;
         u) UNINSTALL=true ;;
+        s) SCRIPTS=true ;;
         F) FORCE=true ;;
         h) HELP=true ;;
         v) ((VERBOSE=VERBOSE+1)) ;;
@@ -109,15 +141,29 @@ if [ $INSTALL ] && [ $UNINSTALL ]; then
     exit -1;
 fi
 
+if ( [ $INSTALL ] || [ $UNINSTALL ] ) && [ $SCRIPTS ]; then
+    if [ "$EUID" -ne 0 ]; then
+        .log 5 "Please run as root with -s."
+        exit -1;
+    fi
+fi
+
+
 .log 5 "started"
 
 if [ $INSTALL ]; then
     install;
+    if [ $SCRIPTS ]; then
+        installScripts;
+    fi
     reload;
 fi
 
 if [ $UNINSTALL ]; then
     uninstall;
+    if [ $SCRIPTS ]; then
+        uninstallScripts;
+    fi
 fi
 
 .log 5 "finished"
