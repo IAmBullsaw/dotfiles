@@ -69,9 +69,13 @@ function install() {
 }
 
 function uninstall() {
-    .log 7 "rm $DESTINATION"
-    rm $DESTINATION
-    .log 5 "removed config"
+    if [ -e $DESTINATION ]; then
+        .log 7 "rm $DESTINATION"
+        rm $DESTINATION
+        .log 5 "removed config"
+    else
+        .log 5 "wont uninstall: doesn't exist"
+    fi
 }
 
 function reload() {
@@ -84,8 +88,25 @@ function reload() {
 function installScripts() {
     cd scripts/
     for FILE in *; do
-        ln -s "`pwd`/$FILE" "/usr/local/bin/${FILE%%.*}"
-        .log 5 "linked $FILE as ${FILE%%.*}"
+        if [ ! -e "/usr/local/bin/${FILE%%.*}" ]; then
+            ln -s "`pwd`/$FILE" "/usr/local/bin/${FILE%%.*}"
+            .log 5 "linked as ${FILE%%.*}"
+        else
+            .log 5 "won't link: already exists"
+        fi
+    done
+    cd ..
+}
+
+function uninstallScripts() {
+    cd scripts/
+    for FILE in *; do
+        if [ -e "/usr/local/bin/${FILE%%.*}" ]; then
+            rm "/usr/local/bin/${FILE%%.*}"
+            .log 5 "removed ${FILE%%.*}"
+        else
+            .log 5 "won't remove: doesn't exist"
+        fi
     done
     cd ..
 }
@@ -120,6 +141,14 @@ if [ $INSTALL ] && [ $UNINSTALL ]; then
     exit -1;
 fi
 
+if ( [ $INSTALL ] || [ $UNINSTALL ] ) && [ $SCRIPTS ]; then
+    if [ "$EUID" -ne 0 ]; then
+        .log 5 "Please run as root with -s."
+        exit -1;
+    fi
+fi
+
+
 .log 5 "started"
 
 if [ $INSTALL ]; then
@@ -132,6 +161,9 @@ fi
 
 if [ $UNINSTALL ]; then
     uninstall;
+    if [ $SCRIPTS ]; then
+        uninstallScripts;
+    fi
 fi
 
 .log 5 "finished"
