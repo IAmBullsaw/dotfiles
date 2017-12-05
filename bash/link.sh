@@ -39,12 +39,13 @@ function help() {
                   User MUST declare the purpose with flags -i or -u."
     echo ""
     echo "OPTIONS
-                  -i If you want to install this .bash_aliases config
-                  -u If you want to uninstall this .bash_aliases config
-                  -s If you want all scripts linked in /usr/local/bin/.
-                  -F Use force. Think about it.
-                  -h Print this 'help'.
-                  -v Increases the verbosity of the process."
+                  -i If you want to install
+                  -u If you want to uninstall
+                  -b If you want .bash_aliases config
+                  -s If you want all scripts linked in /usr/local/bin/
+                  -F Use force. Think about it
+                  -h Print this 'help'
+                  -v Increases the verbosity of the process"
     echo ""
 }
 
@@ -118,10 +119,11 @@ function uninstallScripts() {
 [ $# -gt 0 ] || { usage; exit 0; }
 
 # Get options
-while getopts 'shFiuv' flag; do
+while getopts 'bshFiuv' flag; do
     case "${flag}" in
         i) INSTALL=true ;;
         u) UNINSTALL=true ;;
+        b) BASHALIASES=true ;;
         s) SCRIPTS=true ;;
         F) FORCE=true ;;
         h) HELP=true ;;
@@ -152,15 +154,19 @@ fi
 .log 5 "started"
 
 if [ $INSTALL ]; then
-    install;
+    if [ $BASHALIASES ]; then
+        install;
+        reload;
+    fi
     if [ $SCRIPTS ]; then
         installScripts;
     fi
-    reload;
 fi
 
 if [ $UNINSTALL ]; then
-    uninstall;
+    if [ $BASHALIASES ]; then
+        uninstall;
+    fi
     if [ $SCRIPTS ]; then
         uninstallScripts;
     fi
