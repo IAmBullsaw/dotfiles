@@ -41,6 +41,7 @@ function help() {
     echo "OPTIONS
                   -i If you want to install this .bash_aliases config
                   -u If you want to uninstall this .bash_aliases config
+                  -s If you want all scripts linked in /usr/local/bin/.
                   -F Use force. Think about it.
                   -h Print this 'help'.
                   -v Increases the verbosity of the process."
@@ -80,6 +81,15 @@ function reload() {
     .log 6 "You might want to restart or run '. ~/.bashrc' in all active bash instances"
 }
 
+function installScripts() {
+    cd scripts/
+    for FILE in *; do
+        ln -s "`pwd`/$FILE" "/usr/local/bin/${FILE%%.*}"
+        .log 5 "linked $FILE as ${FILE%%.*}"
+    done
+    cd ..
+}
+
 ##################
 # MAIN SCRIPT FLOW
 
@@ -87,10 +97,11 @@ function reload() {
 [ $# -gt 0 ] || { usage; exit 0; }
 
 # Get options
-while getopts 'hFiuv' flag; do
+while getopts 'shFiuv' flag; do
     case "${flag}" in
         i) INSTALL=true ;;
         u) UNINSTALL=true ;;
+        s) SCRIPTS=true ;;
         F) FORCE=true ;;
         h) HELP=true ;;
         v) ((VERBOSE=VERBOSE+1)) ;;
@@ -113,6 +124,9 @@ fi
 
 if [ $INSTALL ]; then
     install;
+    if [ $SCRIPTS ]; then
+        installScripts;
+    fi
     reload;
 fi
 
