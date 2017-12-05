@@ -3,16 +3,17 @@
 # cp file file.bak
 # as a quick backup for smaller tasks ...
 function usage() {
-    echo "usage: $0 filename [.name]"
+    echo "usage: $0 [-flags] filename [.name]"
 }
 
 function help() {
     echo "Help for backup.sh"
     echo ""
     echo "DESCRIPTION
-                  This is a simple script used for quick backups of a file."
+                  This is a simple script used for quick backups (copies) of a file."
     echo "USAGE
-                  `usage`"
+                  `usage`
+                  if [.name] is provided, anything goes ... "
     echo ""
     echo "OPTIONS
                   -o Overwrite file.
@@ -114,4 +115,3 @@ fi
 .log 2 "full path: $FINALPATH"
 .log 10 "THANK YOU FOR USING THIS SCRIPT"
 .log 10 "TELL YOUR FRIENDS"
-exit 0;
