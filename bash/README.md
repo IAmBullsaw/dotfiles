@@ -6,6 +6,7 @@ The file itself is pretty explanatory :)
 
 ## link.sh
 This script can install/uninstall
+
 | Command | Description |
 | --- | --- |
 | -i or -u | set script to install or uninstall |
