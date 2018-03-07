@@ -37,6 +37,8 @@ values."
      ;; Uncomment some layer names and press <SPC f e R> (Vim style) or
      ;; <M-m f e R> (Emacs style) to install them.
      ;; ----------------------------------------------------------------
+     (c-c++ :variables
+            c-c++-enable-clang-support t)
      ivy
      auto-completion
      ;; better-defaults
@@ -325,8 +327,10 @@ you should place your code here."
   (set-face-foreground 'linum "red")
   ;; Sets flycheck to use c++17 as a standard...
   (setq-default flycheck-gcc-language-standard "c++17"
-                flycheck-clang-language-standard "c++17")
-  )
+                flycheck-clang-language-standard "c++1z")
+
+)
+
 
 ;; Do not write anything past this comment. This is where Emacs will
 ;; auto-generate custom variable definitions.
