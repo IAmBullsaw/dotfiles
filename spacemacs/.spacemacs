@@ -327,7 +327,7 @@ you should place your code here."
   (set-face-foreground 'linum "red")
   ;; Sets flycheck to use c++17 as a standard...
   (setq-default flycheck-gcc-language-standard "c++17"
-                flycheck-clang-language-standard "c++17")
+                flycheck-clang-language-standard "c++1z")
 
 )
 
