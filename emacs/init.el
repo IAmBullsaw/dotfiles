@@ -1,5 +1,13 @@
 (setq gc-cons-threshold (* 20 1024 1024)) 
 
+;;
+;; Packages
+;;
+
+;; Special settings for work (not pushed)
+(add-to-list 'load-path "~/.emacs.d/work/")
+(require 'work)
+
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
 (package-initialize)
@@ -7,6 +15,65 @@
 (unless (package-installed-p 'use-package)
   (package-refresh-contents)
   (package-install 'use-package))
+
+;; To be able to comment and uncomment code
+(use-package evil-commentary
+  :ensure t
+  :config
+  (evil-commentary-mode 1))
+
+;; Spel checking
+(use-package flycheck
+  :ensure t
+  :config
+  (global-flycheck-mode 1))
+
+(use-package evil-surround
+  :ensure t
+  :config
+  (global-evil-surround-mode 1))
+
+;; Useful for git projects
+(use-package projectile
+  :ensure t
+  :config
+  (projectile-global-mode))
+
+(use-package ivy
+  :ensure t
+  :ensure smex
+  :config
+  (setq projectile-completion-system 'ivy
+	ivy-height 15
+	ivy-count-format "(%d/%d) "
+	ivy-display-style 'fancy) 
+  (ivy-mode 1))
+
+(use-package company
+  :ensure t
+  :config
+  (add-hook 'prog-mode-hook 'company-mode)
+  (setq company-idle-delay 0
+	company-minimum-prefix-length 2
+	company-tooltip-align-annotations t
+	company-require-match nil))
+
+(use-package magit
+  :ensure t)
+
+(use-package evil
+  :ensure t
+  :config
+  (evil-mode 1))
+
+;; For python, not up to date
+;; (use-package company-jedi
+;;   :ensure t
+;;   :bind (:map python-mode-map
+;; 	      ("M-." . jedi:goto-definition)
+;; 	      ("M-," . jedi:goto-definition-pop-marker))
+;;   :init
+;;   (add-hook 'python-mode-hook (lambda () (add-to-list 'company-backends 'company-jedi))))
 
 
 ;;
@@ -31,15 +98,15 @@
  		    'face 'xtremely-red-display-time)))
 (display-time)
 
-
 ;; Color the line numbers
 (set-face-attribute 'line-number nil
 		    :foreground "#dd1818")
 (set-face-attribute 'line-number-current-line nil
                     :foreground "#dd1818")
 
+
 ;;
-;; Backups - I like my backups hidden and in abundance
+;; Backups - I like my backups hidden and in abundance, to quote Jonas.
 ;;
 
 (unless (file-exists-p "~/.emacs.d/backups")
@@ -66,58 +133,13 @@
 
 
 ;;
-;; Packages
-;;
-
-(use-package projectile
-  :ensure t
-  :config
-  (projectile-global-mode))
-
-(use-package ivy
-
-  :ensure t
-  :ensure smex
-  :config
-  (setq projectile-completion-system 'ivy
-	ivy-height 15
-	ivy-count-format "(%d/%d) "
-	ivy-display-style 'fancy) 
-  (ivy-mode 1))
-
-(use-package company
-  :ensure t
-  :config
-  (add-hook 'prog-mode-hook 'company-mode)
-  (setq company-idle-delay 0
-	company-minimum-prefix-length 2
-	company-tooltip-align-annotations t
-	company-require-match nil))
-
-
-(use-package company-jedi
-  :ensure t
-  :bind (:map python-mode-map
-	      ("M-." . jedi:goto-definition)
-	      ("M-," . jedi:goto-definition-pop-marker))
-  :init
-  (add-hook 'python-mode-hook (lambda () (add-to-list 'company-backends 'company-jedi))))
-
-
-(use-package magit
-  :ensure t)
-
-(use-package evil
-  :ensure t)
-(evil-mode 1)
-
-;;
 ;; Key bindings
 ;;
 
 ;; mapping ctrl ö and ä to {}
 (define-key key-translation-map (kbd "C-ö") (kbd "{"))
 (define-key key-translation-map (kbd "C-ä") (kbd "}"))
+
 (global-set-key (kbd "C-x k") #'kill-this-buffer)
 
 ;; mapping to magit
@@ -152,10 +174,9 @@
 (setq display-line-numbers-current-absolute 1)
 (setq display-line-numbers 'relative)
 
-
-;; Special settings for work (not pushed)
-(add-to-list 'load-path "~/.emacs.d/work/")
-(require 'work)
+;;
+;; Emacs' Custom package 
+;;
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
@@ -163,8 +184,8 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   (quote 
-    (use-package smex projectile magit ivy company-jedi evil))))
+   (quote
+    (evil-surround evil-commentary flycheck use-package smex projectile magit ivy evil))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
