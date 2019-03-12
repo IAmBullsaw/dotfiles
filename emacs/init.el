@@ -1,4 +1,4 @@
-(setq gc-cons-threshold (* 20 1024 1024)) 
+(setq gc-cons-threshold (* 20 1024 1024))
 
 ;;
 ;; Packages
@@ -7,7 +7,8 @@
 ;; Special settings for work (not pushed)
 (add-to-list 'load-path "~/.emacs.d/work/")
 (require 'work)
-
+(require 'babelreader)
+(add-to-list 'auto-mode-alist '("\\.decoded\\'" . babelreader-mode))
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
 (package-initialize)
@@ -16,17 +17,29 @@
   (package-refresh-contents)
   (package-install 'use-package))
 
-;; To be able to comment and uncomment code
-(use-package evil-commentary
+;; very good parenthesis handling
+;;(use-package smartparens-config
+;;  :ensure t
+;;  :init
+;;  (add-hook 'prog-mode-hook #'smartparens-mode))
+
+;; Coloring parenthesises for easier spotting of things
+(use-package rainbow-delimiters
   :ensure t
-  :config
-  (evil-commentary-mode 1))
+  :init
+  (add-hook 'prog-mode-hook #'rainbow-delimiters-mode))
 
 ;; Spel checking
 (use-package flycheck
   :ensure t
   :config
   (global-flycheck-mode 1))
+
+;; To be able to comment and uncomment code
+(use-package evil-commentary
+  :ensure t
+  :config
+  (evil-commentary-mode 1))
 
 (use-package evil-surround
   :ensure t
@@ -46,7 +59,7 @@
   (setq projectile-completion-system 'ivy
 	ivy-height 15
 	ivy-count-format "(%d/%d) "
-	ivy-display-style 'fancy) 
+	ivy-display-style 'fancy)
   (ivy-mode 1))
 
 (use-package company
@@ -64,7 +77,13 @@
 (use-package evil
   :ensure t
   :config
-  (evil-mode 1))
+  (evil-mode 1)
+ (setq evil-emacs-state-cursor '("red" box))
+  (setq evil-normal-state-cursor '("green" box))
+  (setq evil-visual-state-cursor '("orange" box))
+  (setq evil-insert-state-cursor '("red" bar))
+  (setq evil-replace-state-cursor '("red" (hbar . 8)))
+  (setq evil-operator-state-cursor '("green" (hbar . 8))) )
 
 ;; For python, not up to date
 ;; (use-package company-jedi
@@ -81,6 +100,20 @@
 ;;
 
 (load-theme 'misterioso)
+
+;; Stretch cursos over full char width, good for ex. tabs
+(setq x-stretch-cursor 1)
+
+;; Better line highlight color matching Misterioso theme
+;; (set-face-attribute 'highlight nil :inherit nil :background "#40b5a9")
+;; (set-face-attribute 'lazy-highlight nil :inherit nil :background "#40b5a9")
+(global-hl-line-mode)
+(set-face-attribute 'cursor nil :inherit nil :background "#e5e5e5")
+(set-face-attribute 'hl-line nil :inherit nil :background "#415062")
+
+;; Show me all that unwanted whitespace!
+(setq-default show-trailing-whitespace t)
+
 
 ;; This causes the current time in the mode line to be displayed in
 ;; `xtremely-red-display-time-face' to make it stand out visually.
@@ -145,6 +178,10 @@
 ;; mapping to magit
 (global-set-key (kbd "C-x g") 'magit-status )
 
+;; mapping for projectile
+(global-set-key (kbd "C-x p") 'projectile-find-file)
+(global-set-key (kbd "C-c p") 'projectile-find-file-in-known-projects)
+
 ;;
 ;; Settings
 ;;
@@ -185,7 +222,7 @@
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (evil-surround evil-commentary flycheck use-package smex projectile magit ivy evil))))
+    (rainbow-delimiters evil-surround evil-commentary flycheck use-package smex projectile magit ivy evil))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
