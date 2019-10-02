@@ -54,13 +54,17 @@
 
 (use-package ivy
   :ensure t
-  :ensure smex
+  :diminish (ivy-mode . "")             ; does not display ivy in the modeline
+  :init
+  (ivy-mode 1)
   :config
-  (setq projectile-completion-system 'ivy
-	ivy-height 15
-	ivy-count-format "(%d/%d) "
-	ivy-display-style 'fancy)
-  (ivy-mode 1))
+  (setq ivy-use-virtual-buffers t)       ; extend searching to bookmarks and
+  (setq ivy-height 15)                   ; set height of the ivy window
+  (setq ivy-count-format "(%d/%d) ")     ; count format, from the ivy help page
+  (setq ivy-display-style 'fancy)
+  (setq projectile-completion-system 'ivy))
+
+(global-set-key "\C-s" 'swiper)
 
 (use-package company
   :ensure t
@@ -78,21 +82,32 @@
   :ensure t
   :config
   (evil-mode 1)
- (setq evil-emacs-state-cursor '("red" box))
+  (setq evil-emacs-state-cursor '("red" box))
   (setq evil-normal-state-cursor '("green" box))
   (setq evil-visual-state-cursor '("orange" box))
   (setq evil-insert-state-cursor '("red" bar))
   (setq evil-replace-state-cursor '("red" (hbar . 8)))
   (setq evil-operator-state-cursor '("green" (hbar . 8))) )
 
-;; For python, not up to date
-;; (use-package company-jedi
-;;   :ensure t
-;;   :bind (:map python-mode-map
-;; 	      ("M-." . jedi:goto-definition)
-;; 	      ("M-," . jedi:goto-definition-pop-marker))
-;;   :init
-;;   (add-hook 'python-mode-hook (lambda () (add-to-list 'company-backends 'company-jedi))))
+
+;; To compile via 'compile command
+(require 'cl)
+(defun* get-closest-pathname (&optional (file "Makefile"))
+  "Determine the pathname of the first instance of FILE starting from the current directory towards root.
+This may not do the correct thing in presence of links. If it does not find FILE, then it shall return the name
+of FILE in the current directory, suitable for creation"
+  (let ((root (expand-file-name "/"))) ; the win32 builds should translate this correctly
+    (expand-file-name file
+		      (loop
+			for d = default-directory then (expand-file-name ".." d)
+			if (file-exists-p (expand-file-name file d))
+			return d
+			if (equal d root)
+			return nil))))
+
+(require 'compile)
+ (add-hook 'c++-mode-hook (lambda () (set (make-local-variable 'compile-command) (format "make -f %s" (get-closest-pathname)))))
+
 
 
 ;;
@@ -222,7 +237,7 @@
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (rainbow-delimiters evil-surround evil-commentary flycheck use-package smex projectile magit ivy evil))))
+    (counsel rainbow-delimiters evil-surround evil-commentary flycheck use-package smex projectile magit ivy evil))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
