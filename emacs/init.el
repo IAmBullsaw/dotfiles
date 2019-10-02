@@ -17,8 +17,9 @@
   (package-refresh-contents)
   (package-install 'use-package))
 
-;; very good parenthesis handling
-;;(use-package smartparens-config
+;; TODO: Fix this
+;; ;; very good parenthesis handling
+;; (use-package smartparens-config
 ;;  :ensure t
 ;;  :init
 ;;  (add-hook 'prog-mode-hook #'smartparens-mode))
@@ -78,6 +79,9 @@
 (use-package magit
   :ensure t)
 
+(use-package clang-format
+  :ensure t)
+
 (use-package evil
   :ensure t
   :config
@@ -88,7 +92,6 @@
   (setq evil-insert-state-cursor '("red" bar))
   (setq evil-replace-state-cursor '("red" (hbar . 8)))
   (setq evil-operator-state-cursor '("green" (hbar . 8))) )
-
 
 ;; To compile via 'compile command
 (require 'cl)
@@ -228,8 +231,6 @@ of FILE in the current directory, suitable for creation"
 (global-display-line-numbers-mode)
 (setq display-line-numbers 'relative)
 (setq display-line-numbers-current-absolute t)
-
-
 
 ;;
 ;; Emacs' Custom package
