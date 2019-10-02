@@ -194,8 +194,11 @@ of FILE in the current directory, suitable for creation"
 (global-set-key (kbd "C-x g") 'magit-status )
 
 ;; mapping for projectile
-(global-set-key (kbd "C-x p") 'projectile-find-file)
-(global-set-key (kbd "C-c p") 'projectile-find-file-in-known-projects)
+(global-set-key (kbd "C-c C-p f") 'projectile-find-file)
+(global-set-key (kbd "C-c C-p C-f") 'projectile-find-file-in-known-projects)
+
+(add-hook 'c++-mode-hook (lambda ()
+			   (local-set-key (kbd "C-c C-k") 'compile)))
 
 ;;
 ;; Settings
@@ -223,11 +226,13 @@ of FILE in the current directory, suitable for creation"
 
 ;; Set hybrid mode for line numbers
 (global-display-line-numbers-mode)
-(setq display-line-numbers-current-absolute 1)
 (setq display-line-numbers 'relative)
+(setq display-line-numbers-current-absolute t)
+
+
 
 ;;
-;; Emacs' Custom package 
+;; Emacs' Custom package
 ;;
 
 (custom-set-variables
@@ -237,7 +242,7 @@ of FILE in the current directory, suitable for creation"
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (counsel rainbow-delimiters evil-surround evil-commentary flycheck use-package smex projectile magit ivy evil))))
+    (counsel rainbow-delimiters evil-surround evil-commentary flycheck use-package projectile magit ivy evil))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
