@@ -228,9 +228,9 @@ of FILE in the current directory, suitable for creation"
 (fset 'yes-or-no-p 'y-or-n-p)
 
 ;; Set hybrid mode for line numbers
+(setq linum-relative-current-symbol "")
+(setq display-line-numbers-type 'relative)
 (global-display-line-numbers-mode)
-(setq display-line-numbers 'relative)
-(setq display-line-numbers-current-absolute t)
 
 ;;
 ;; Emacs' Custom package
