@@ -8,6 +8,7 @@
 (add-to-list 'load-path "~/.emacs.d/work/")
 (require 'work)
 (require 'babelreader)
+(require 'valgrindreader)
 (add-to-list 'auto-mode-alist '("\\.decoded\\'" . babelreader-mode))
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
@@ -23,6 +24,13 @@
 ;;  :ensure t
 ;;  :init
 ;;  (add-hook 'prog-mode-hook #'smartparens-mode))
+
+;; It's very nice to see which rows has been deleted, modified or added...
+(use-package git-gutter-fringe
+  :ensure t
+  :config
+  (global-git-gutter-mode t)
+  )
 
 ;; Coloring parenthesises for easier spotting of things
 (use-package rainbow-delimiters
@@ -153,7 +161,8 @@ of FILE in the current directory, suitable for creation"
 (set-face-attribute 'line-number nil
 		    :foreground "#dd1818")
 (set-face-attribute 'line-number-current-line nil
-                    :foreground "#dd1818")
+                    :foreground "#dd1818"
+		    :background "#415062")
 
 
 ;;
@@ -187,6 +196,11 @@ of FILE in the current directory, suitable for creation"
 ;; Key bindings
 ;;
 
+;; we wanna swithc things up!
+
+(global-set-key (kbd "s-TAB") 'mode-line-other-buffer)
+(global-set-key (kbd "s-<tab>") 'mode-line-other-buffer)
+
 ;; mapping ctrl ö and ä to {}
 (define-key key-translation-map (kbd "C-ö") (kbd "{"))
 (define-key key-translation-map (kbd "C-ä") (kbd "}"))
@@ -203,6 +217,9 @@ of FILE in the current directory, suitable for creation"
 (add-hook 'c++-mode-hook (lambda ()
 			   (local-set-key (kbd "C-c C-k") 'compile)))
 
+;; Smerge when merging in Emacs
+(setq smerge-command-prefix "\C-cv")
+
 ;;
 ;; Settings
 ;;
@@ -210,12 +227,19 @@ of FILE in the current directory, suitable for creation"
 ;; Remove the horrible tool bar buttons up top
 (tool-bar-mode -1)
 
+;; And that menu bar.
+(menu-bar-mode -1)
+
+;; You know what, let's take that scroll bar away as well.
 (scroll-bar-mode -1)
 
 ;; Be gone with the pesky startup screen
 (setq inhibit-startup-message -1)
 (setq inhibit-startup-screen -1)
 (display-splash-screen -1)
+
+;; Do not indent with tabs, ever.
+(setq-default indent-tabs-mode nil)
 
 ;; When opening a file, this returns you to were you were
 (save-place-mode 1)
