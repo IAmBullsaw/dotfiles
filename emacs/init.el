@@ -1,8 +1,23 @@
 (setq gc-cons-threshold (* 20 1024 1024))
 
+
+
+(require 'package)
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
+(add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/"))
+(add-to-list 'package-archives '("gnu" . "https://elpa.gnu.org/packages/"))
+
+(package-initialize)
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
+
 ;;
 ;; Packages
 ;;
+
+(use-package counsel
+  :ensure t)
 
 ;; Special settings for work (not pushed)
 (add-to-list 'load-path "~/.emacs.d/work/")
@@ -10,20 +25,12 @@
 (require 'babelreader)
 (require 'valgrindreader)
 (add-to-list 'auto-mode-alist '("\\.decoded\\'" . babelreader-mode))
-(require 'package)
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
-(package-initialize)
 
-(unless (package-installed-p 'use-package)
-  (package-refresh-contents)
-  (package-install 'use-package))
-
-;; TODO: Fix this
-;; ;; very good parenthesis handling
-;; (use-package smartparens-config
-;;  :ensure t
-;;  :init
-;;  (add-hook 'prog-mode-hook #'smartparens-mode))
+;; very good parenthesis handling
+(use-package smartparens
+ :ensure t
+ :init
+ (add-hook 'prog-mode-hook #'smartparens-mode))
 
 ;; It's very nice to see which rows has been deleted, modified or added...
 (use-package git-gutter-fringe
@@ -31,6 +38,56 @@
   :config
   (global-git-gutter-mode t)
   )
+
+ (use-package eglot
+   :ensure t)
+
+ (add-to-list 'eglot-server-programs '((c++-mode c-mode) "clangd"))
+ (add-hook 'c-mode-hook 'eglot-ensure)
+ (add-hook 'c++-mode-hook 'eglot-ensure)
+
+
+(defun flymake-c-init ()
+  (let* ((temp-file (flymake-init-create-temp-buffer-copy
+                     'flymake-create-temp-intemp))
+         (local-file (file-relative-name
+                      temp-file
+                      (file-name-directory buffer-file-name))))
+    (list "perl"
+          (list "-MProject::Libs" "-wc" local-file))))
+
+
+;; Flymake creates temporary files in same directory, which messes update
+;; normal make *.cc things. This code will instead place them in emacs/temp/
+(defun flymake-create-temp-intemp (file-name prefix)
+  "Return file name in temporary directory for checking
+   FILE-NAME. This is a replacement for
+   `flymake-create-temp-inplace'. The difference is that it gives
+   a file name in `temporary-file-directory' instead of the same
+   directory as FILE-NAME.
+
+   For the use of PREFIX see that function.
+
+   Note that not making the temporary file in another directory
+   \(like here) will not if the file you are checking depends on
+   relative paths to other files \(for the type of checks flymake
+   makes)."
+  (unless (stringp file-name)
+    (error "Invalid file-name"))
+  (or prefix
+      (setq prefix "flymake"))
+  (let* ((name (concat
+                (file-name-nondirectory
+                 (file-name-sans-extension file-name))
+                "_" prefix))
+         (ext  (concat "." (file-name-extension file-name)))
+         (temp-name (make-temp-file name nil ext))
+         )
+    (flymake-log 3 "create-temp-intemp: file=%s temp=%s" file-name temp-name)
+    temp-name))
+;; This is the line which tells flymake to make its files in a temp dir
+(setq temporary-file-directory "~/.emacs.d/tmp/")
+
 
 ;; Coloring parenthesises for easier spotting of things
 (use-package rainbow-delimiters
@@ -61,6 +118,9 @@
   :config
   (projectile-global-mode))
 
+(use-package swiper
+  :ensure t)
+
 (use-package ivy
   :ensure t
   :diminish (ivy-mode . "")             ; does not display ivy in the modeline
@@ -84,11 +144,16 @@
 	company-tooltip-align-annotations t
 	company-require-match nil))
 
+(use-package company-flx
+  :ensure t
+  :config
+  (company-flx-mode +1))
+
 (use-package magit
   :ensure t)
 
-(use-package clang-format
-  :ensure t)
+;; (use-packageI clang-format
+;;  :ensure t)
 
 (use-package evil
   :ensure t
@@ -236,7 +301,6 @@ of FILE in the current directory, suitable for creation"
 ;; Be gone with the pesky startup screen
 (setq inhibit-startup-message -1)
 (setq inhibit-startup-screen -1)
-(display-splash-screen -1)
 
 ;; Do not indent with tabs, ever.
 (setq-default indent-tabs-mode nil)
@@ -265,9 +329,14 @@ of FILE in the current directory, suitable for creation"
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(company-backends
+   (quote
+    (company-bbdb company-eclim company-semantic company-xcode company-cmake company-capf company-files
+                  (company-dabbrev-code company-gtags company-etags company-keywords)
+                  company-oddmuse company-dabbrev)))
  '(package-selected-packages
    (quote
-    (counsel rainbow-delimiters evil-surround evil-commentary flycheck use-package projectile magit ivy evil))))
+    (smartparens smartparens-config eglot counsel rainbow-delimiters evil-surround evil-commentary flycheck use-package projectile magit ivy evil))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
