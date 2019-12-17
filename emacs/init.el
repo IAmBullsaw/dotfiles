@@ -1,6 +1,14 @@
 (setq gc-cons-threshold (* 20 1024 1024))
 
+(prefer-coding-system 'utf-8)
+(set-default-coding-systems 'utf-8)
+(set-terminal-coding-system 'utf-8)
+(set-keyboard-coding-system 'utf-8)
 
+(setq frame-title-format
+      '((:eval (if (buffer-file-name)
+       (abbreviate-file-name (buffer-file-name))
+       "%b"))))
 
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
@@ -21,10 +29,7 @@
 
 ;; Special settings for work (not pushed)
 (add-to-list 'load-path "~/.emacs.d/work/")
-(require 'work)
-(require 'babelreader)
-(require 'valgrindreader)
-(add-to-list 'auto-mode-alist '("\\.decoded\\'" . babelreader-mode))
+(use-package work) ;; Do not crash horribly if not found, please.
 
 ;; very good parenthesis handling
 (use-package smartparens
@@ -39,54 +44,58 @@
   (global-git-gutter-mode t)
   )
 
- (use-package eglot
-   :ensure t)
+;; TODO(iambullsaw) configure a proper cpp environment
+;; - using rtags or eglot or whatever. I need it!
+(use-package rtags
+  :ensure t)
 
- (add-to-list 'eglot-server-programs '((c++-mode c-mode) "clangd"))
- (add-hook 'c-mode-hook 'eglot-ensure)
- (add-hook 'c++-mode-hook 'eglot-ensure)
+;; (use-package eglot
+;;   :ensure t)
+
+;; (add-to-list 'eglot-server-programs '((c++-mode c-mode) "clangd"))
+;; (add-hook 'c-mode-hook 'eglot-ensure)
+;; (add-hook 'c++-mode-hook 'eglot-ensure)
+
+;; (defun flymake-c-init ()
+;;   (let* ((temp-file (flymake-init-create-temp-buffer-copy
+;;                      'flymake-create-temp-intemp))
+;;          (local-file (file-relative-name
+;;                       temp-file
+;;                       (file-name-directory buffer-file-name))))
+;;     (list "perl"
+;;           (list "-MProject::Libs" "-wc" local-file))))
 
 
-(defun flymake-c-init ()
-  (let* ((temp-file (flymake-init-create-temp-buffer-copy
-                     'flymake-create-temp-intemp))
-         (local-file (file-relative-name
-                      temp-file
-                      (file-name-directory buffer-file-name))))
-    (list "perl"
-          (list "-MProject::Libs" "-wc" local-file))))
+;; ;; Flymake creates temporary files in same directory, which messes update
+;; ;; normal make *.cc things. This code will instead place them in emacs/temp/
+;; (defun flymake-create-temp-intemp (file-name prefix)
+;;   "Return file name in temporary directory for checking
+;;    FILE-NAME. This is a replacement for
+;;    `flymake-create-temp-inplace'. The difference is that it gives
+;;    a file name in `temporary-file-directory' instead of the same
+;;    directory as FILE-NAME.
 
+;;    For the use of PREFIX see that function.
 
-;; Flymake creates temporary files in same directory, which messes update
-;; normal make *.cc things. This code will instead place them in emacs/temp/
-(defun flymake-create-temp-intemp (file-name prefix)
-  "Return file name in temporary directory for checking
-   FILE-NAME. This is a replacement for
-   `flymake-create-temp-inplace'. The difference is that it gives
-   a file name in `temporary-file-directory' instead of the same
-   directory as FILE-NAME.
-
-   For the use of PREFIX see that function.
-
-   Note that not making the temporary file in another directory
-   \(like here) will not if the file you are checking depends on
-   relative paths to other files \(for the type of checks flymake
-   makes)."
-  (unless (stringp file-name)
-    (error "Invalid file-name"))
-  (or prefix
-      (setq prefix "flymake"))
-  (let* ((name (concat
-                (file-name-nondirectory
-                 (file-name-sans-extension file-name))
-                "_" prefix))
-         (ext  (concat "." (file-name-extension file-name)))
-         (temp-name (make-temp-file name nil ext))
-         )
-    (flymake-log 3 "create-temp-intemp: file=%s temp=%s" file-name temp-name)
-    temp-name))
-;; This is the line which tells flymake to make its files in a temp dir
-(setq temporary-file-directory "~/.emacs.d/tmp/")
+;;    Note that not making the temporary file in another directory
+;;    \(like here) will not if the file you are checking depends on
+;;    relative paths to other files \(for the type of checks flymake
+;;    makes)."
+;;   (unless (stringp file-name)
+;;     (error "Invalid file-name"))
+;;   (or prefix
+;;       (setq prefix "flymake"))
+;;   (let* ((name (concat
+;;                 (file-name-nondirectory
+;;                  (file-name-sans-extension file-name))
+;;                 "_" prefix))
+;;          (ext  (concat "." (file-name-extension file-name)))
+;;          (temp-name (make-temp-file name nil ext))
+;;          )
+;;     (flymake-log 3 "create-temp-intemp: file=%s temp=%s" file-name temp-name)
+;;     temp-name))
+;; ;; This is the line which tells flymake to make its files in a temp dir
+;; (setq temporary-file-directory "~/.emacs.d/tmp/")
 
 
 ;; Coloring parenthesises for easier spotting of things
@@ -152,7 +161,7 @@
 (use-package magit
   :ensure t)
 
-;; (use-packageI clang-format
+;; (use-package clang-format
 ;;  :ensure t)
 
 (use-package evil
@@ -336,7 +345,7 @@ of FILE in the current directory, suitable for creation"
                   company-oddmuse company-dabbrev)))
  '(package-selected-packages
    (quote
-    (smartparens smartparens-config eglot counsel rainbow-delimiters evil-surround evil-commentary flycheck use-package projectile magit ivy evil))))
+    (markdown-mode plantuml-mode rtags smartparens smartparens-config eglot counsel rainbow-delimiters evil-surround evil-commentary flycheck use-package projectile magit ivy evil))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
