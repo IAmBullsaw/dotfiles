@@ -1,0 +1,69 @@
+#
+# Add the following if statement to your .bashrc.user
+
+# Set the bash prompt PS1
+# if [ -e /$HOME/.bash_prompt ]; then
+#   source /$HOME/.bash_prompt
+# fi
+
+# Colors
+# Don't forget to escape them with escaped brackets \[ \]
+export COLOR_NC='\e[0m' # No Color
+export COLOR_WHITE='\e[1;37m'
+export COLOR_BLACK='\e[0;30m'
+export COLOR_BLUE='\e[0;34m'
+export COLOR_LIGHT_BLUE='\e[1;34m'
+export COLOR_GREEN='\e[0;32m'
+export COLOR_LIGHT_GREEN='\e[1;32m'
+export COLOR_CYAN='\e[0;36m'
+export COLOR_LIGHT_CYAN='\e[1;36m'
+export COLOR_RED='\e[0;31m'
+export COLOR_LIGHT_RED='\e[1;31m'
+export COLOR_PURPLE='\e[0;35m'
+export COLOR_LIGHT_PURPLE='\e[1;35m'
+export COLOR_BROWN='\e[0;33m'
+export COLOR_YELLOW='\e[1;33m'
+export COLOR_GRAY='\e[0;30m'
+export COLOR_LIGHT_GRAY='\e[0;37m'
+
+
+# Get current branch in git repo
+function parse_git_branch() {
+	BRANCH=`git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/'`
+	if [ ! "${BRANCH}" == "" ]
+	then
+		echo "${BRANCH}"
+	else
+		echo "-"
+	fi
+}
+
+# Get which file is sourced
+function sourced_file() {
+  echo "-"
+}
+
+# Get the hostname
+function get_hostname() {
+  if [ "$HOSTNAME" != "seliiuvd01942.seli.gic.ericsson.se" ]; then
+	echo "$HOSTNAME ";
+  else
+	echo "";
+  fi
+}
+
+# Parse out the three latest folders
+function update_three_directories() {
+  case $PWD in
+    $HOME) HPWD="~";;
+    $HOME/*/*) HPWD="${PWD#"${PWD%/*/*}/"}";;
+    $HOME/*) HPWD="~/${PWD##*/}";;
+    /*/*/*) HPWD="${PWD#"${PWD%/*/*/*}/"}";;
+    *) HPWD="$PWD";;
+  esac
+  echo $HPWD;
+}
+
+# TODO: Don't recalculate three directories every prompt but rather every cd ...
+PS1="\[${COLOR_LIGHT_GRAY}\][\A]\[${COLOR_NC}\] ${get_hostname}\[${COLOR_YELLOW}\]\`sourced_file\` \`parse_git_branch\`\[${COLOR_NC}\] [\`update_three_directories\`]\$ "
+PS2="\[${COLOR_LIGHT_GRAY}\][\A]\[${COLOR_NC}\] \[${COLOR_YELLOW}\]>\[${COLOR_NC}\] "
