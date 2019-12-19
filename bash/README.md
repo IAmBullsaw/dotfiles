@@ -1,7 +1,9 @@
 # bash
 
-## The structure
-The file .bashrc loads other bash_* files and itself contains total environment variables
+## The structure 
+
+### .bashrc
+This file loads other bash_* files and itself contains total environment variables
 
 ### .bash_aliases
 These are the most common aliases I use for bash.
