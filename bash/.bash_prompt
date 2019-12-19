@@ -45,11 +45,7 @@ function sourced_file() {
 
 # Get the hostname
 function get_hostname() {
-  if [ "$HOSTNAME" != "seliiuvd01942.seli.gic.ericsson.se" ]; then
-	echo "$HOSTNAME ";
-  else
-	echo "";
-  fi
+  echo "";
 }
 
 # Parse out the three latest folders
