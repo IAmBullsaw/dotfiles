@@ -23,12 +23,16 @@ I have the alias `constants` which lists  all defined constants.
 ### .bash_work
 In this file I have work related  stuff that will never be pushed to GitHub, which is why the file is only seen in .bashrc
 
+## installation
 
-## link.sh
-This script can install/uninstall the scripts and the settings
+Use soft links via `ln -s` to install them
 
-| Command | Description |
-| --- | --- |
-| -i or -u | set script to install or uninstall |
-| -b | .bash_aliases |
-| -s | all scripts found in bash/scripts |
+```bash
+sudo -- -sh -c "ln -s /home/$USER/dotfiles/bash/.bashrc /home/$USER/.bashrc;\
+                ln -s /home/$USER/dotfiles/bash/.bash_aliases /home/$USER/.bash_aliases;\
+                ln -s /home/$USER/dotfiles/bash/.bash_functions /home/$USER/.bash_functions;\
+                ln -s /home/$USER/dotfiles/bash/.bash_prompt /home/$USER/.bash_prompt;\
+                ln -s /home/$USER/dotfiles/bash/.bash_constants /home/$USER/.bash_constants;"
+```
+
+often it will help to throw on a `-f` in the mix.
