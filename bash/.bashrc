@@ -1,6 +1,8 @@
 # Environments
 export $PAGER less
 export TERM=xterm-color
+export HISTSIZE=-1
+export HISTFILESIZE=-1
 
 # All aliases must be defined in .bash_aliases
 if [ -e $HOME/.bash_aliases ]; then
@@ -41,6 +43,11 @@ fi
 
 if [ -e $HOME/.bash_work ]; then
   source $HOME/.bash_work
+fi
+
+
+if [ -e $HOME/.bash_zellij ]; then
+  source $HOME/.bash_zellij
 fi
 
 export NVM_DIR="$HOME/.nvm"
