@@ -41,7 +41,7 @@ function gc() {
          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
          if [ "$CURRENT_BRANCH" = "master" ]; then
                  echo "I won't allow you to commit directly to master branch"
-                 echo "go -b <insert branch name here>"
+                 echo "git go -b <insert branch name here>"
                  (exit 1)
          else
                  git commit "$@"
