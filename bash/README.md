@@ -14,11 +14,9 @@ Here I define things that are too large to be an alias as funtions.
 ### .bash_prompt
 This is my bash prompt definition, with helper functions related to it.
 
-
 ### .bash_constants
 Here I define constans, which is super empty right now but had a purpose before. 
 I have the alias `constants` which lists  all defined constants.
-
 
 ### .bash_work
 In this file I have work related  stuff that will never be pushed to GitHub, which is why the file is only seen in .bashrc
@@ -30,11 +28,11 @@ Use soft links via `ln -s` to install them
 ### bash_aliases et.c.
 
 ```bash
-sudo -- -sh -c "ln -s /home/$USER/dotfiles/bash/.bashrc /home/$USER/.bashrc;\
-                ln -s /home/$USER/dotfiles/bash/.bash_aliases /home/$USER/.bash_aliases;\
-                ln -s /home/$USER/dotfiles/bash/.bash_functions /home/$USER/.bash_functions;\
-                ln -s /home/$USER/dotfiles/bash/.bash_prompt /home/$USER/.bash_prompt;\
-                ln -s /home/$USER/dotfiles/bash/.bash_constants /home/$USER/.bash_constants;"
+sudo -- -sh -c "ln -s /home/$USER/dotfiles/bash/.bash_aliases /home/$USER/;\
+                ln -s /home/$USER/dotfiles/bash/.bash_functions /home/$USER/;\
+                ln -s /home/$USER/dotfiles/bash/.bash_prompt /home/$USER/;\
+                ln -s /home/$USER/dotfiles/bash/.bash_constants /home/$USER/;\
+                ln -s /home/$USER/dotfiles/bash/.bashrc /home/$USER/;"
 ```
 
 often it will help to throw on a `-f` in the mix.
@@ -42,15 +40,15 @@ often it will help to throw on a `-f` in the mix.
 
 ### scripts
 
-I choose to use the /usr/local/bin folder for my own scripts, so something like the following should do the trick.
+I choose to use the `/usr/local/bin` folder for my own scripts, so something like the following should do the trick.
+If you do not wish to use sudo, then I'd recommend using `~/bin` or similar.
 
-```
+```bash
 for file in *; do
     if [ -f "$file" ]; then
         filename=${file%.*}
         sudo ln -s "$(pwd)/$file" /usr/local/bin/$filename && \
-        echo "Success: linked $filename" || \
-        echo "Failure: $filename"
+        echo "Success: linked $filename"
     fi
 done
 ```
