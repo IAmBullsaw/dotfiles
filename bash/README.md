@@ -27,6 +27,8 @@ In this file I have work related  stuff that will never be pushed to GitHub, whi
 
 Use soft links via `ln -s` to install them
 
+### bash_aliases et.c.
+
 ```bash
 sudo -- -sh -c "ln -s /home/$USER/dotfiles/bash/.bashrc /home/$USER/.bashrc;\
                 ln -s /home/$USER/dotfiles/bash/.bash_aliases /home/$USER/.bash_aliases;\
@@ -36,3 +38,20 @@ sudo -- -sh -c "ln -s /home/$USER/dotfiles/bash/.bashrc /home/$USER/.bashrc;\
 ```
 
 often it will help to throw on a `-f` in the mix.
+
+
+### scripts
+
+I choose to use the /usr/local/bin folder for my own scripts, so something like the following should do the trick.
+
+```
+for file in *; do
+    if [ -f "$file" ]; then
+        filename=${file%.*}
+        sudo ln -s "$(pwd)/$file" /usr/local/bin/$filename && \
+        echo "Success: linked $filename" || \
+        echo "Failure: $filename"
+    fi
+done
+```
+
