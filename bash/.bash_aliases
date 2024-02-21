@@ -9,9 +9,11 @@ PATH="$PATH:/home/$USER/bin/"
 
 # Jump to special folders
 alias ccd="cd ~/Code"
+alias groot='cd $(git rev-parse --show-toplevel)'
 
 
 # Programs or apps
+alias readme='grip -b README.md'
 
 
 # Searching
@@ -23,18 +25,18 @@ alias fhere="find . -iname"
 
 
 # Sourecing
+alias language='setxkbmap -layout se'
 
 
 # Git
+git config --global alias.go checkout
 alias ga='git add'
 alias gb='git branch'
-alias gc='git commit'
 alias gd='git diff'
 alias gg="git grep"
 alias gh='git log --pretty=tformat:"%h %ad | %s%d [%an]" --graph --date=short'
 alias gk='gitk --all'
 alias gl="git log --pretty='oneline'"
-alias go='git checkout'
 alias gs='git status'
 alias rebase='git stash && git checkout master && git pull --rebase && git checkout - && git rebase master && git stash apply'
 
@@ -62,7 +64,6 @@ alias mk='make -j16 -l32'
 alias mkc='mk realclean'
 alias make-list='make -pRr all | grep -v "#" | grep -E "^.PHONY" | tr " " "\n" | grep -v ".PHONY"'
 
-
 # Conversion
 alias d2h="printf '%x\n'"
 
@@ -73,11 +74,10 @@ alias clear="clear && clear"
 alias hg='history | grep'
 alias constants='cat ~/.bash_constants'
 alias grep='grep --color=auto'
-
+alias aocurl='python3 ~/Scripts/aocurl.py'
 
 #########################################
 # add-alias generated aliases follows ...
 # Sort them whenever you're looking at this file!
 
 
-alias demacs='emacs --debug-init'
