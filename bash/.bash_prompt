@@ -26,13 +26,27 @@ export COLOR_YELLOW='\e[1;33m'
 export COLOR_GRAY='\e[0;30m'
 export COLOR_LIGHT_GRAY='\e[0;37m'
 
+# Mark if shell is a VIM shell
+function am_i_vim() {
+    if [ ! "${VIM}" == "" ]
+    then
+        echo "\[${COLOR_RED}\]+\[${COLOR_NC}\]"
+    else
+        echo "\$"
+    fi
+}
 
 # Get current branch in git repo
 function parse_git_branch() {
 	BRANCH=`git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/'`
 	if [ ! "${BRANCH}" == "" ]
 	then
-		echo "${BRANCH}"
+                if [ "${BRANCH}" == "(HEAD detached at FETCH_HEAD)" ]
+                then
+                        echo "detatched"
+                else
+                        echo "${BRANCH}"
+                fi
 	else
 		echo "-"
 	fi
@@ -40,12 +54,12 @@ function parse_git_branch() {
 
 # Get which file is sourced
 function sourced_file() {
-  echo "-"
+    # often overridden in .bash_work
 }
 
 # Get the hostname
 function get_hostname() {
-  echo "";
+    # often overridden in .bash_work
 }
 
 # Parse out the three latest folders
@@ -61,5 +75,5 @@ function update_three_directories() {
 }
 
 # TODO: Don't recalculate three directories every prompt but rather every cd ...
-PS1="\[${COLOR_LIGHT_GRAY}\][\A]\[${COLOR_NC}\] ${get_hostname}\[${COLOR_YELLOW}\]\`sourced_file\` \`parse_git_branch\`\[${COLOR_NC}\] [\`update_three_directories\`]\$ "
+PS1="\[${COLOR_LIGHT_GRAY}\][\A]\[${COLOR_NC}\] `get_hostname``sourced_file` \[${COLOR_YELLOW}\]\`parse_git_branch\`\[${COLOR_NC}\] [\`update_three_directories\`]`am_i_vim` "
 PS2="\[${COLOR_LIGHT_GRAY}\][\A]\[${COLOR_NC}\] \[${COLOR_YELLOW}\]>\[${COLOR_NC}\] "
