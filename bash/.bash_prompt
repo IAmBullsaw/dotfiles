@@ -55,11 +55,13 @@ function parse_git_branch() {
 # Get which file is sourced
 function sourced_file() {
     # often overridden in .bash_work
+    :
 }
 
 # Get the hostname
 function get_hostname() {
     # often overridden in .bash_work
+    :
 }
 
 # Parse out the three latest folders
