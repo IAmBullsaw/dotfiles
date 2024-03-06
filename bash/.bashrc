@@ -9,23 +9,6 @@ if [ -e $HOME/.bash_aliases ]; then
   source $HOME/.bash_aliases
 fi
 
-# Add own scripts
-if [ -e  $HOME/.local/bin ]; then
-  export PATH="$PATH:$HOME/.local/bin"
-fi
-
-if [ -e  $HOME/local/bin ]; then
-  export PATH="$PATH:$HOME/local/bin"
-fi
-
-if [ -e  $HOME/bin ]; then
-  export PATH="$PATH:$HOME/bin"
-fi
-
-if [ -e  $HOME/rtags/bin ]; then
-   export PATH="$PATH:$HOME/rtags/bin"
-fi
-
 # Add own functions
 if [ -e $HOME/.bash_functions ]; then
   source $HOME/.bash_functions
@@ -45,10 +28,31 @@ if [ -e $HOME/.bash_work ]; then
   source $HOME/.bash_work
 fi
 
+# Add own scripts
+if [ -e  $HOME/.local/bin ]; then
+  export PATH="$PATH:$HOME/.local/bin"
+fi
+
+if [ -e  $HOME/bin ]; then
+  export PATH="$PATH:$HOME/bin"
+fi
+
+
+if [ -e  $HOME/rtags/bin ]; then
+   export PATH="$PATH:$HOME/rtags/bin"
+fi
+
+if [ -e $HOME/.git-completion.bash ]; then
+  source $HOME/.git-completion.bash
+fi
 
 if [ -e $HOME/.bash_zellij ]; then
   source $HOME/.bash_zellij
 fi
+
+# clean up duplicate entries
+
+PATH=$(echo $PATH | sed 's/:/\n/g' | sed 's/bin\//bin/g' | sort | uniq | tr '\n' ':')
 
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm

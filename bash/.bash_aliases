@@ -6,6 +6,9 @@
 # Add own scripts to path
 PATH="$PATH:/home/$USER/bin/"
 
+# Add zoxide to path
+PATH="$PATH:/home/$USER/Code/zoxide/"
+
 
 # Jump to special folders
 alias ccd="cd ~/Code"
@@ -46,7 +49,7 @@ alias clone='repo /proj/lte_twh/x86_64-Linux2.6.16/ltetools/current/bin/clone_re
 alias gas='alias|grep '
 alias gba='for k in `git branch | sed s/^..//`; do echo -e `git log -1 --pretty=format:"%Cgreen%ci %Cblue%cr%Creset" $k --`\\t"$k";done | sort'
 alias gbv='git branch -vv'
-alias gca="git commit --amend"
+alias gca="git amend-protected"
 alias gclean='cd \$MY_GIT_TOP && git submodule foreach --recursive "git clean -xdf" && git clean -xdf -e .ccache -e .flex_dbg -e remap_catalog\\*.xml -e .baseline && c'
 alias gfp='git fetch -p'
 alias grr='/proj/lte_twh/x86_64-Linux2.6.16/ltetools/current/bin/grr'
