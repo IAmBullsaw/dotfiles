@@ -1,5 +1,5 @@
 # Environments
-export $PAGER less
+export PAGER=less
 export TERM=xterm-color
 export HISTSIZE=-1
 export HISTFILESIZE=-1
@@ -37,7 +37,6 @@ if [ -e  $HOME/bin ]; then
   export PATH="$PATH:$HOME/bin"
 fi
 
-
 if [ -e  $HOME/rtags/bin ]; then
    export PATH="$PATH:$HOME/rtags/bin"
 fi
@@ -51,8 +50,8 @@ if [ -e $HOME/.bash_zellij ]; then
 fi
 
 # clean up duplicate entries
-
 PATH=$(echo $PATH | sed 's/:/\n/g' | sed 's/bin\//bin/g' | sort | uniq | tr '\n' ':')
 
+# NVM stuff
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
