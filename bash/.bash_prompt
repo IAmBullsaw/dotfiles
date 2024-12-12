@@ -1,9 +1,8 @@
 #
 # Add the following if statement to your .bashrc.user
-
-# Set the bash prompt PS1
+# # Set the bash prompt PS1
 # if [ -e /$HOME/.bash_prompt ]; then
-#   source /$HOME/.bash_prompt
+#     source /$HOME/.bash_prompt
 # fi
 
 # Colors
@@ -38,18 +37,18 @@ function am_i_vim() {
 
 # Get current branch in git repo
 function parse_git_branch() {
-	BRANCH=`git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/'`
-	if [ ! "${BRANCH}" == "" ]
-	then
-                if [ "${BRANCH}" == "(HEAD detached at FETCH_HEAD)" ]
-                then
-                        echo "detatched"
-                else
-                        echo "${BRANCH}"
-                fi
-	else
-		echo "-"
-	fi
+    BRANCH=`git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/'`
+    if [ ! "${BRANCH}" == "" ]
+    then
+        if [ "${BRANCH}" == "(HEAD detached at FETCH_HEAD)" ]
+        then
+            echo "detatched"
+        else
+            echo "${BRANCH}"
+        fi
+    else
+        echo "-"
+	  fi
 }
 
 # Get which file is sourced
@@ -77,5 +76,5 @@ function update_three_directories() {
 }
 
 # TODO: Don't recalculate three directories every prompt but rather every cd ...
-PS1="\[${COLOR_LIGHT_GRAY}\][\A]\[${COLOR_NC}\] `get_hostname``sourced_file` \[${COLOR_YELLOW}\]\`parse_git_branch\`\[${COLOR_NC}\] [\`update_three_directories\`]`am_i_vim` "
-PS2="\[${COLOR_LIGHT_GRAY}\][\A]\[${COLOR_NC}\] \[${COLOR_YELLOW}\]>\[${COLOR_NC}\] "
+PS1="\[${COLOR_GREEN}\][\A]\[${COLOR_NC}\] `get_hostname``sourced_file` \[${COLOR_YELLOW}\]\`parse_git_branch\`\[${COLOR_NC}\] [\`update_three_directories\`]`am_i_vim` "
+PS2="\[${COLOR_GREEN}\][\A]\[${COLOR_NC}\] \[${COLOR_YELLOW}\]>\[${COLOR_NC}\] "
