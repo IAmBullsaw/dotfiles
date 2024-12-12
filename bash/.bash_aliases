@@ -45,14 +45,12 @@ alias rebase='git stash && git checkout master && git pull --rebase && git check
 
 # alias gbv='git merge-base origin/dev HEAD | tr -d "\n" | xargs -0 -I ancestor git log --oneline ancestor..HEAD'
 alias cdgt='cd \$MY_GIT_T'
-alias clone='repo /proj/lte_twh/x86_64-Linux2.6.16/ltetools/current/bin/clone_repo'
 alias gas='alias|grep '
 alias gba='for k in `git branch | sed s/^..//`; do echo -e `git log -1 --pretty=format:"%Cgreen%ci %Cblue%cr%Creset" $k --`\\t"$k";done | sort'
 alias gbv='git branch -vv'
 alias gca="git amend-protected"
 alias gclean='cd \$MY_GIT_TOP && git submodule foreach --recursive "git clean -xdf" && git clean -xdf -e .ccache -e .flex_dbg -e remap_catalog\\*.xml -e .baseline && c'
 alias gfp='git fetch -p'
-alias grr='/proj/lte_twh/x86_64-Linux2.6.16/ltetools/current/bin/grr'
 alias gsb='git log --oneline | grep -E "DAILYBUILD|(Import.+CXP)" | head -n 1'
 alias gsf='git show --pretty="format:" --name-only'
 alias gss='cd \$MY_GIT_TOP && git submodule status && c'
@@ -65,6 +63,7 @@ alias g++14='g++ -std=c++14 -Wall -Werror -Wextra -Wpedantic -Wconversion -Wcast
 # Make
 alias mk='make -j16 -l32'
 alias mkc='mk realclean'
+alias mkt='mk test'
 alias make-list='make -pRr all | grep -v "#" | grep -E "^.PHONY" | tr " " "\n" | grep -v ".PHONY"'
 
 # Conversion
@@ -82,5 +81,6 @@ alias aocurl='python3 ~/Scripts/aocurl.py'
 #########################################
 # add-alias generated aliases follows ...
 # Sort them whenever you're looking at this file!
+
 
 
