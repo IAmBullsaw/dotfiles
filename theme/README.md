@@ -1,5 +1,11 @@
 # Themes I use
 
+## Catppucin
+
+* https://catppuccin.com/
+
+# Previously
+
 ## Nordic
 
 * https://github.com/EliverLara/Nordic/  

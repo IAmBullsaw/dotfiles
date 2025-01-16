@@ -48,3 +48,14 @@ function gc() {
          fi
 }
 
+# Function which opens the Scripts/logbook associated with the current repo
+# the logbook path is set relative to the repo root, one up 
+# llb stands for local logbook
+function llb() {
+  if ! [[ $(git rev-parse --is-inside-work-tree 2>/dev/null) == "true" ]]; then
+    echo "Error: This command must be run from within a Git repository."
+  else
+    ABSOLUTE_PATH="$(git rev-parse --show-toplevel)_logbook.md"
+    logbook -t $ABSOLUTE_PATH $@
+  fi
+}
