@@ -27,9 +27,9 @@ fi
 function list_files() {
     fuzzyfilefinder=$( command -v fzf );
     if [[ -z "${fuzzyfilefinder}" ]]; then
-        head ${master_file};
+        tail ${master_file};
     else
-        cat ${master_file} | ${fuzzyfilefinder};
+        tac ${master_file} | ${fuzzyfilefinder};
     fi
 }
 
