@@ -1,5 +1,0 @@
-{
-    "vim.disableAnnoyingNeovimMessage": true,
-    "extensions.ignoreRecommendations": false,
-    "editor.formatOnSave": true
-}
