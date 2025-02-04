@@ -124,7 +124,7 @@ def encrypt_file(content, output_path, recipient):
 
     try:
         result = subprocess.run(
-            ['gpg', '--yes', '--encrypt', '--recipient', recipient, '--output', output_path, temp_file_path],
+            ['gpg', '--yes', '--throw-keyids', '--encrypt', '--recipient', recipient, '--output', output_path, temp_file_path],
             capture_output=True,
             text=True
         )
