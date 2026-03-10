@@ -1,6 +1,10 @@
 layout {
     pane split_direction="vertical"  { 
-        pane command="nvim" borderless=true
+        pane command="bash" {
+          args "-c" "XDG_CONFIG_HOME=/repo/ezjanos/.config/ XDG_DATA_HOME=/repo/ezjanos/.local/ XDG_STATE_HOME=/repo/ezjanos/.local/state /repo/ezjanos/neovim/bin/nvim"
+          borderless true
+          name "Neovim"
+        }
         pane focus=true name="Awww yisss maddafakkin bash"
     }
 }
