@@ -45,3 +45,11 @@ _R_CYAN='\e[0;36m'
 # --- Paths -------------------------------------------------
 export NVM_DIR="$HOME/.nvm"
 BOOKMARK_FILE="$HOME/.bash_bookmarks"
+
+# --- Repos which show a red NaN if SOURCED_gitenv is unset
+# Add/remove reop basenames here (dirname, not path)
+# Overridden in work.sh
+WATCHED_REPOS=(
+  "null"
+  "next"
+)
