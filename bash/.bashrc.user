@@ -1,0 +1,86 @@
+# ============================================================
+#  .bashrc
+#  Loads ~/.bashrc.d/compiled if up to date, otherwise
+#  runs the module compiler first.
+# ============================================================
+
+_BASHRC_D="$HOME/.bashrc.d"
+_COMPILED="$_BASHRC_D/compiled"
+
+# ---- Check if compiled is stale ---------------------------
+_bashrc_needs_compile() {
+    [[ ! -f "$_COMPILED" ]] && return 0
+    local f
+    for f in "$_BASHRC_D"/*.sh; do
+        [[ "$f" -nt "$_COMPILED" ]] && return 0
+    done
+    return 1
+}
+
+# ---- Module compiler --------------------------------------
+_bashrc_compile() {
+    local start=$SECONDS
+
+    declare -A _loaded=()
+    local -a _load_order=()
+
+    require() {
+        local name="${1%.sh}"           # tolerate require config.sh or require config
+        local file="$_BASHRC_D/${name}.sh"
+
+        [[ -v _loaded["$name"] ]] && return 0
+
+        if [[ ! -f "$file" ]]; then
+            echo ".bashrc: require: '$file' not found" >&2
+            return 1
+        fi
+
+        _loaded["$name"]=1
+        _load_order+=("$name")
+        # shellcheck source=/dev/null
+        source "$file"
+    }
+
+    # Glob-source every module; each file may call require for its own deps first
+    local f
+    for f in "$_BASHRC_D"/*.sh; do
+        require "$(basename "${f%.sh}")"
+    done
+
+    # Write compiled output
+    {
+        printf '# AUTO-GENERATED — do not edit by hand\n'
+        printf '# Compiled: %s\n' "$(date '+%F %T')"
+        printf '# Load order: %s\n\n' "${_load_order[*]}"
+
+        # No-op stub: require calls are left in each section for readability
+        # but must be harmless when the compiled file is sourced directly.
+        printf 'require() { :; }\n\n'
+
+        for name in "${_load_order[@]}"; do
+            printf '# === %s.sh ' "$name"
+            printf '=%.0s' {1..50}
+            printf '\n'
+            cat "$_BASHRC_D/${name}.sh"
+            printf '\n'
+        done
+    } > "$_COMPILED"
+
+    unset -f require
+    unset _loaded _load_order f
+
+    printf '.bashrc: compiled in %ds → %s\n' $(( SECONDS - start )) "$_COMPILED"
+}
+
+# ---- Bootstrap --------------------------------------------
+if _bashrc_needs_compile; then
+    _bashrc_compile
+else
+    # shellcheck source=/dev/null
+    source "$_COMPILED"
+fi
+
+unset -f _bashrc_needs_compile _bashrc_compile
+unset _COMPILED
+# _BASHRC_D is kept — config.sh exports BASHRC_D for use by bashrc-compile etc.
+unset _BASHRC_D
