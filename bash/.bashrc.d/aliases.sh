@@ -47,6 +47,8 @@ alias readme='grip -b README.md'
 
 # --- Compilation -------------------------------------------
 alias g++14='g++ -std=c++14 -Wall -Werror -Wextra -Wpedantic -Wconversion -Wcast-align -Wunused -Wshadow -Wold-style-cast -Wpointer-arith -Wno-missing-braces'
+alias g++17='g++ -std=c++17 -Wall -Werror -Wextra -Wpedantic -Wconversion -Wcast-align -Wunused -Wshadow -Wold-style-cast -Wpointer-arith -Wno-missing-braces'
+alias g++20='g++ -std=c++2a -Wall -Werror -Wextra -Wpedantic -Wconversion -Wcast-align -Wunused -Wshadow -Wold-style-cast -Wpointer-arith -Wno-missing-braces'
 
 # --- Make --------------------------------------------------
 alias mk='make -j16 -l32'
@@ -61,6 +63,7 @@ alias d2h="printf '%x\n'"
 alias constants='cat "$BASHRC_D/config.sh"'
 alias clear='clear && clear'
 alias language='setxkbmap -layout se'
+alias zj="zellij attach -c"
 
 # --- Other -----------------------------------------------------------------
 alias aocurl='python3 ~/Scripts/aocurl.py'
