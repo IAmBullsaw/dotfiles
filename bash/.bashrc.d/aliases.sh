@@ -6,7 +6,7 @@ require functions
 # ============================================================
 
 # --- PATH additions ----------------------------------------
-[[ ":$PATH:" != *":$HOME/bin:"* ]] && PATH="${PATH%:}:$HOME/bin"
+[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && PATH="${PATH%:}:$HOME/.local/bin"
 
 # --- Navigation --------------------------------------------
 alias cd..='cd ..'
