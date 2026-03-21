@@ -1,0 +1,118 @@
+---
+- name: Development environment setup
+  hosts: localhost
+  connection: local
+  vars_files:
+    - vars.yml
+
+  tasks:
+    # ── System packages ────────────────────────────────────────────────────────
+
+    - name: Install apt packages
+      become: true
+      ansible.builtin.apt:
+        name: "{{ apt_packages }}"
+        state: present
+        update_cache: true
+      when: ansible_pkg_mgr == "apt"
+      tags: packages
+
+    - name: Install brew packages
+      community.general.homebrew:
+        name: "{{ brew_packages }}"
+        state: present
+      when: ansible_pkg_mgr == "brew"
+      tags: packages
+
+    # ── pip packages ───────────────────────────────────────────────────────────
+
+    - name: Install pip packages
+      ansible.builtin.pip:
+        name: "{{ pip_packages }}"
+        executable: pip3
+        extra_args: --user
+      tags: packages
+
+    # ── Kitty ──────────────────────────────────────────────────────────────────
+    # apt version is too old; use the official binary installer instead
+
+    - name: Check if kitty is installed
+      ansible.builtin.stat:
+        path: "{{ ansible_env.HOME }}/.local/kitty.app/bin/kitty"
+      register: kitty_stat
+      tags: tools
+
+    - name: Install kitty
+      ansible.builtin.shell:
+        cmd: "curl -L {{ kitty_install_url }} | sh /dev/stdin launch=n"
+      when: not kitty_stat.stat.exists
+      tags: tools
+
+    # ── Zellij ─────────────────────────────────────────────────────────────────
+    # Not in apt; download the release binary directly
+
+    - name: Check if zellij is installed
+      ansible.builtin.stat:
+        path: "{{ zellij_install_dir }}/zellij"
+      register: zellij_stat
+      tags: tools
+
+    - name: Ensure ~/.local/bin exists
+      ansible.builtin.file:
+        path: "{{ zellij_install_dir }}"
+        state: directory
+        mode: "0755"
+      tags: tools
+
+    - name: Install zellij
+      ansible.builtin.unarchive:
+        src: "https://github.com/zellij-org/zellij/releases/download/{{ zellij_version }}/{{ zellij_tarball }}"
+        dest: "{{ zellij_install_dir }}"
+        remote_src: true
+        include:
+          - zellij
+      when: not zellij_stat.stat.exists
+      tags: tools
+
+    # ── NVM ────────────────────────────────────────────────────────────────────
+
+    - name: Check if nvm is installed
+      ansible.builtin.stat:
+        path: "{{ ansible_env.HOME }}/.nvm/nvm.sh"
+      register: nvm_stat
+      tags: tools
+
+    - name: Install nvm
+      ansible.builtin.shell:
+        cmd: >
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+      when: not nvm_stat.stat.exists
+      tags: tools
+
+    # ── Dotfile symlinks ───────────────────────────────────────────────────────
+
+    - name: Ensure config directories exist
+      ansible.builtin.file:
+        path: "{{ ansible_env.HOME }}/{{ item.dest | dirname }}"
+        state: directory
+        mode: "0755"
+      loop: "{{ symlinks }}"
+      when: (item.dest | dirname) != ""
+      tags: dotfiles
+
+    - name: Symlink dotfiles
+      ansible.builtin.file:
+        src: "{{ dotfiles_dir }}/{{ item.src }}"
+        dest: "{{ ansible_env.HOME }}/{{ item.dest }}"
+        state: link
+        force: true
+      loop: "{{ symlinks }}"
+      tags: dotfiles
+
+    - name: Ensure scripts are executable
+      ansible.builtin.file:
+        path: "{{ dotfiles_dir }}/{{ item.src }}"
+        mode: "0755"
+      loop: "{{ symlinks }}"
+      when: item.dest is match("bin/.*")
+      tags: dotfiles

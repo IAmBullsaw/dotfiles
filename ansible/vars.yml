@@ -1,0 +1,61 @@
+---
+dotfiles_dir: "{{ lookup('env', 'HOME') }}/dotfiles"
+
+# Packages available in apt (Debian/Ubuntu)
+apt_packages:
+  - git
+  - curl
+  - wget
+  - gnupg
+  - gcc
+  - g++
+  - make
+  - python3
+  - python3-pip
+  - neovim
+  - ripgrep
+  - fzf
+
+# Packages available in brew (macOS / Linuxbrew)
+brew_packages:
+  - git
+  - curl
+  - wget
+  - gnupg
+  - gcc
+  - make
+  - python3
+  - neovim
+  - ripgrep
+  - fzf
+  - kitty
+  - zellij
+
+# kitty: installed via official binary installer (apt version is too old)
+kitty_install_url: "https://sw.kovidgoyal.net/kitty/installer.sh"
+
+# zellij: installed via GitHub release binary (not in apt)
+zellij_version: "v0.41.2"
+zellij_install_dir: "{{ ansible_env.HOME }}/.local/bin"
+zellij_tarball: "zellij-{{ ansible_architecture }}-unknown-linux-musl.tar.gz"
+
+# pip packages (installed for the current user)
+pip_packages:
+  - grip
+
+# Dotfile symlinks: src (relative to dotfiles_dir) → dest (in $HOME)
+symlinks:
+  - src: bash/.bashrc.user
+    dest: .bashrc
+  - src: kitty/kitty.conf
+    dest: .config/kitty/kitty.conf
+  - src: zellij/config.kdl
+    dest: .config/zellij/config.kdl
+  - src: zellij/layouts
+    dest: .config/zellij/layouts
+  - src: scripts/hgg.sh
+    dest: .local/bin/hgg
+  - src: scripts/logbook.py
+    dest: .local/bin/logbook
+  - src: scripts/reg.py
+    dest: .local/bin/reg

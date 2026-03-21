@@ -43,10 +43,10 @@ add-alias() {
     bashrc-compile
 }
 
-# --- Symlink ~/Scripts/* into ~/bin (no extension) ---------
+# --- Symlink ~/Scripts/* into ~/.local/bin (no extension) --
 relink-scripts() {
     local src="$HOME/Scripts"
-    local dst="$HOME/bin"
+    local dst="$HOME/.local/bin"
     [[ -d "$src" ]] || { echo "relink-scripts: $src not found" >&2; return 1; }
     mkdir -p "$dst"
     local file link
