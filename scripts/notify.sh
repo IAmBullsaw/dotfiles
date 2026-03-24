@@ -1,7 +1,6 @@
 #!/bin/bash
-# Lunch reminder — called from cron with argument "early" or "final"
+# Daily notification reminders — called from cron: notify.sh <type>
 
-# Auto-detect display and dbus from mate-session process
 _ENV="/proc/$(pgrep -u "$(whoami)" -x mate-session | head -1)/environ"
 export DISPLAY=$(tr '\0' '\n' < "$_ENV" | rg -m1 '^DISPLAY=' | cut -d= -f2-)
 export DBUS_SESSION_BUS_ADDRESS=$(tr '\0' '\n' < "$_ENV" | rg -m1 '^DBUS_SESSION_BUS_ADDRESS=' | cut -d= -f2-)
@@ -18,17 +17,23 @@ QUOTES=(
   "You could leave life right now. Let that determine what you do and say and think. — Marcus Aurelius"
   "Discipline equals freedom. — Jocko Willink"
 )
+QUOTE="${QUOTES[$((RANDOM % ${#QUOTES[@]}))]}"
 
 case "$1" in
-  early)
-    QUOTE="${QUOTES[$((RANDOM % ${#QUOTES[@]}))]}"
+  lunch-soon)
     notify-send -u normal -t 0 -i dialog-information \
-      "🍽️ Lunch soon!" \
-      "Start wrapping up.\n\n\"${QUOTE}\""
+      "🍽️ Lunch soon!" "Start wrapping up.\n\n\"${QUOTE}\""
     ;;
-  final)
+  lunch-now)
     notify-send -u critical -t 0 -i dialog-warning \
-      "🍽️ Lunch. Now or never." \
-      "Step away from the keyboard."
+      "🍽️ Lunch. Now or never." "Step away from the keyboard."
+    ;;
+  wrap-up)
+    notify-send -u normal -t 0 -i dialog-information \
+      "🕓 Start wrapping up!" "Write your work log. What did you do? What's next?\n\n\"${QUOTE}\""
+    ;;
+  go-home)
+    notify-send -u critical -t 0 -i dialog-warning \
+      "🏠 Time to go." "Log is written. You're done. Go."
     ;;
 esac
