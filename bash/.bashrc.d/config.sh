@@ -46,6 +46,22 @@ _R_CYAN='\e[0;36m'
 export NVM_DIR="$HOME/.nvm"
 BOOKMARK_FILE="$HOME/.bash_bookmarks"
 
+# --- Terminal setup ----------------------------------------
+[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+fi
+
+# --- Bash completion ----------------------------------------
+if ! shopt -oq posix; then
+    if [ -f /usr/share/bash-completion/bash_completion ]; then
+        . /usr/share/bash-completion/bash_completion
+    elif [ -f /etc/bash_completion ]; then
+        . /etc/bash_completion
+    fi
+fi
+
 # --- Repos that require environment sourcing before use.
 # Shows a red NaN in prompt if env is not sourced.
 # Overridden in work.sh

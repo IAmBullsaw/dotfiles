@@ -16,6 +16,7 @@ alias groot='cd "$(git rev-parse --show-toplevel)"'
 # --- Listing -----------------------------------------------
 alias ls='ls --color=auto --group-directories-first'
 alias l='ls -l'
+alias la='ls -A'
 alias ll='ls -laF'
 alias lsd='ls -d */ .*/'
 
@@ -23,6 +24,8 @@ alias lsd='ls -d */ .*/'
 alias fhere='find . -iname'
 alias hg='history | grep'
 alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
 
 # --- Git ---------------------------------------------------
 alias ga='git add'
@@ -64,6 +67,10 @@ alias constants='cat "$BASHRC_D/config.sh"'
 alias clear='clear && clear'
 alias language='setxkbmap -layout se'
 alias zj="zellij attach -c"
+
+# --- Homelab ---------------------------------------------------------------
+alias mount-rpi5='sshfs -v dietpi@192.168.88.9:/home/dietpi /home/bullen/projects/homelab/rpi5'
+alias unmount-rpi5='fusermount -u /home/bullen/projects/homelab/rpi5'
 
 # --- Other -----------------------------------------------------------------
 alias aocurl='python3 ~/Code/scripts/aocurl.py'
