@@ -45,9 +45,6 @@ alias gsf='git show --pretty="format:" --name-only'
 alias rebase='git stash && git checkout master && git pull --rebase && git checkout - && git rebase master && git stash apply'
 alias gas='alias | grep'
 
-# --- Programs ----------------------------------------------
-alias readme='grip -b README.md'
-
 # --- Compilation -------------------------------------------
 alias g++14='g++ -std=c++14 -Wall -Werror -Wextra -Wpedantic -Wconversion -Wcast-align -Wunused -Wshadow -Wold-style-cast -Wpointer-arith -Wno-missing-braces'
 alias g++17='g++ -std=c++17 -Wall -Werror -Wextra -Wpedantic -Wconversion -Wcast-align -Wunused -Wshadow -Wold-style-cast -Wpointer-arith -Wno-missing-braces'

@@ -24,13 +24,6 @@
       when: ansible_pkg_mgr == "brew"
       tags: packages
 
-    - name: Install pip packages
-      ansible.builtin.pip:
-        name: "{{ pip_packages }}"
-        executable: pip3
-        extra_args: --user
-      tags: packages
-
     # ── User tools (GitHub releases) ───────────────────────────────────────────
 
     - name: Ensure ~/.local/bin exists
