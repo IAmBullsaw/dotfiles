@@ -1,6 +1,6 @@
 # === config.sh =============================================
-#  Pure data: variables, exports, shopt.
-#  No functions, no logic, no side effects beyond these.
+#  Environment setup: variables, exports, shopt, and
+#  one-time shell init (lesspipe, dircolors, completion).
 #  Everything else does: require config
 # ===========================================================
 
