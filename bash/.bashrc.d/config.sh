@@ -46,6 +46,13 @@ _R_CYAN='\e[0;36m'
 export NVM_DIR="$HOME/.nvm"
 BOOKMARK_FILE="$HOME/.bash_bookmarks"
 
+# --- fzf + fd integration ---------------------------------
+if command -v fd &>/dev/null; then
+    export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+    export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+    export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
+fi
+
 # --- Terminal setup ----------------------------------------
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
