@@ -140,7 +140,7 @@
 
     - name: Neovim installed
       ansible.builtin.debug:
-        msg: "Neovim {{ neovim_version }} installed to {{ neovim_prefix }}/bin/nvim"
+        msg: "Neovim {{ neovim_version }} installed to {{ neovim_prefix }}/bin/nvim. Set NVIM_LOCAL_DIR to sync config to local disk on pull."
       when: nvim_clone.changed
       tags: neovim
 
@@ -171,4 +171,19 @@
         mode: "0755"
       loop: "{{ symlinks }}"
       when: item.dest is search("bin/")
+      tags: dotfiles
+
+    # ── Git hooks (local only, never committed) ────────────────────────────────
+
+    - name: Install dotfiles post-merge hook
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
+          if [[ -n "$NVIM_LOCAL_DIR" && -d "$NVIM_LOCAL_DIR" ]]; then
+              rsync -a --delete \
+                  "$(git rev-parse --show-toplevel)/nvim/.config/nvim/" \
+                  "$NVIM_LOCAL_DIR/"
+          fi
+        dest: "{{ dotfiles_dir }}/.git/hooks/post-merge"
+        mode: "0755"
       tags: dotfiles
