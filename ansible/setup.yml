@@ -69,6 +69,7 @@
         cmd: "find {{ gh_tmpdir.path | default('/tmp') }} -name {{ item.item.binary }} -type f -exec cp {} {{ local_bin }}/{{ item.item.binary }} \\; && chmod 755 {{ local_bin }}/{{ item.item.binary }}"
       loop: "{{ gh_tool_stat.results }}"
       when: not item.stat.exists and gh_tmpdir is not skipped
+      changed_when: false
       tags: tools
 
     - name: Clean up temp dir
@@ -118,6 +119,30 @@
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
       when: not nvm_stat.stat.exists
       tags: tools
+
+    # ── Neovim (from source) ──────────────────────────────────────────────────
+
+    - name: Clone neovim
+      ansible.builtin.git:
+        repo: "{{ neovim_repo }}"
+        dest: "{{ neovim_src }}"
+        version: "{{ neovim_version }}"
+        depth: 1
+      register: nvim_clone
+      tags: neovim
+
+    - name: Build and install neovim
+      ansible.builtin.shell:
+        cmd: "make CMAKE_BUILD_TYPE=Release CMAKE_INSTALL_PREFIX={{ neovim_prefix }} install"
+        chdir: "{{ neovim_src }}"
+      when: nvim_clone.changed
+      tags: neovim
+
+    - name: Neovim installed
+      ansible.builtin.debug:
+        msg: "Neovim {{ neovim_version }} installed to {{ neovim_prefix }}/bin/nvim"
+      when: nvim_clone.changed
+      tags: neovim
 
     # ── Dotfile symlinks ───────────────────────────────────────────────────────
 

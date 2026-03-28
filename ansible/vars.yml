@@ -4,6 +4,9 @@ local_bin: "{{ ansible_env.HOME }}/.local/bin"
 
 # ── System packages (distro-maintained, need sudo) ─────────────────────────
 # Base tools where the repo version is fine.
+# Only apt and brew are handled here. RHEL/dnf is intentionally excluded
+# because RHEL is only used at work, where packages come from the module
+# system (module add ...) and are managed separately in work.sh.
 
 apt_packages:
   - git
@@ -15,6 +18,10 @@ apt_packages:
   - make
   - python3
   - python3-pip
+  - python3-venv
+  - ninja-build
+  - gettext
+  - cmake
   - bat
 
 brew_packages:
@@ -25,6 +32,9 @@ brew_packages:
   - gcc
   - make
   - python3
+  - cmake
+  - ninja
+  - gettext
 
 # ── User tools (GitHub releases -> ~/.local/bin, no sudo) ──────────────────
 # Same version everywhere. Update version here to upgrade.
@@ -59,7 +69,17 @@ github_releases:
 # kitty: installed via official binary installer (apt version is too old)
 kitty_install_url: "https://sw.kovidgoyal.net/kitty/installer.sh"
 
-# pip packages (installed for the current user)
+# ── Neovim (built from source) ─────────────────────────────────────────────
+# Tracks nightly. Update neovim_version to pin a specific commit/tag.
+# Build deps (cmake, ninja, gettext) are in the apt/brew lists above.
+neovim_repo: "https://github.com/neovim/neovim.git"
+neovim_version: "nightly"
+neovim_src: "{{ ansible_env.HOME }}/.local/src/neovim"
+neovim_prefix: "{{ ansible_env.HOME }}/.local"
+
+# pip packages (installed with --user for the current user)
+# NOTE: pip --user is deprecated on Python 3.11+ (PEP 668). If this breaks
+# on newer distros, switch to pipx or add --break-system-packages.
 pip_packages:
   - grip
 
@@ -73,6 +93,8 @@ symlinks:
     dest: .bashrc.d
   - src: kitty/kitty.conf
     dest: .config/kitty/kitty.conf
+  - src: nvim/.config/nvim
+    dest: .config/nvim
   - src: zellij/config.kdl
     dest: .config/zellij/config.kdl
   - src: zellij/layouts
