@@ -49,7 +49,7 @@ github_releases:
 
   - name: zellij
     repo: zellij-org/zellij
-    version: "0.41.2"
+    version: "0.44.0"
     tarball: "zellij-x86_64-unknown-linux-musl.tar.gz"
     binary: zellij
 

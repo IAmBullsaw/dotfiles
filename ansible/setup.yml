@@ -33,11 +33,12 @@
         mode: "0755"
       tags: tools
 
-    - name: Check installed GitHub release tools
-      ansible.builtin.stat:
-        path: "{{ local_bin }}/{{ item.binary }}"
+    - name: Get installed versions of GitHub release tools
+      ansible.builtin.shell:
+        cmd: "{{ local_bin }}/{{ item.binary }} --version 2>/dev/null | grep -oP '\\d+\\.\\d+\\.\\d+' | head -1 || echo none"
       loop: "{{ github_releases }}"
-      register: gh_tool_stat
+      register: gh_tool_versions
+      changed_when: false
       tags: tools
 
     - name: Create temp dir for GitHub release tools
@@ -45,7 +46,6 @@
         state: directory
         prefix: "gh_tool_"
       register: gh_tmpdir
-      when: gh_tool_stat.results | selectattr('stat.exists', 'equalto', false) | list | length > 0
       tags: tools
 
     - name: Download and extract GitHub release tools
@@ -53,23 +53,22 @@
         src: "https://github.com/{{ item.item.repo }}/releases/download/{{ item.item.tag_prefix | default('v') }}{{ item.item.version }}/{{ item.item.tarball }}"
         dest: "{{ gh_tmpdir.path | default('/tmp') }}"
         remote_src: true
-      loop: "{{ gh_tool_stat.results }}"
-      when: not item.stat.exists and gh_tmpdir is not skipped
+      loop: "{{ gh_tool_versions.results }}"
+      when: item.stdout != item.item.version
       tags: tools
 
     - name: Install GitHub release binaries
       ansible.builtin.shell:
         cmd: "find {{ gh_tmpdir.path | default('/tmp') }} -name {{ item.item.binary }} -type f -exec cp {} {{ local_bin }}/{{ item.item.binary }} \\; && chmod 755 {{ local_bin }}/{{ item.item.binary }}"
-      loop: "{{ gh_tool_stat.results }}"
-      when: not item.stat.exists and gh_tmpdir is not skipped
-      changed_when: false
+      loop: "{{ gh_tool_versions.results }}"
+      when: item.stdout != item.item.version
+      changed_when: true
       tags: tools
 
     - name: Clean up temp dir
       ansible.builtin.file:
-        path: "{{ gh_tmpdir.path | default(omit) }}"
+        path: "{{ gh_tmpdir.path }}"
         state: absent
-      when: gh_tmpdir is not skipped
       tags: tools
 
     # ── bat ────────────────────────────────────────────────────────────────────
@@ -96,6 +95,16 @@
       ansible.builtin.shell:
         cmd: "curl -L {{ kitty_install_url }} | sh /dev/stdin launch=n"
       when: not kitty_stat.stat.exists
+      tags: tools
+
+    - name: Symlink kitty into ~/.local/bin
+      ansible.builtin.file:
+        src: "{{ ansible_env.HOME }}/.local/kitty.app/bin/{{ item }}"
+        dest: "{{ local_bin }}/{{ item }}"
+        state: link
+      loop:
+        - kitty
+        - kitten
       tags: tools
 
     # ── NVM ────────────────────────────────────────────────────────────────────
@@ -178,11 +187,8 @@
                   "$NVIM_LOCAL_DIR/"
           fi
 
-          if [[ -n "$NVIM_LOCAL_INSTALL" && -d "$NVIM_LOCAL_INSTALL" && -x "$HOME/.local/bin/nvim" ]]; then
-              rsync -a --delete "$HOME/.local/bin/nvim" "$NVIM_LOCAL_INSTALL/bin/"
-              rsync -a --delete "$HOME/.local/lib64/nvim/" "$NVIM_LOCAL_INSTALL/lib64/nvim/"
-              rsync -a --delete "$HOME/.local/share/nvim/runtime/" "$NVIM_LOCAL_INSTALL/share/nvim/runtime/"
-          fi
+          # Neovim binary sync removed — wrapper script at ~/.config/work/nvim-wrapper.sh
+          # handles XDG paths and points directly to /repo/$USER/neovim/bin/nvim
         dest: "{{ dotfiles_dir }}/.git/hooks/post-merge"
         mode: "0755"
       tags: dotfiles
