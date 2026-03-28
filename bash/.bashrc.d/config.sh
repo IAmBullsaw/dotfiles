@@ -76,3 +76,9 @@ WATCHED_REPOS=(
   "null"
   "next"
 )
+
+# ---- fzf (keybindings + completion) -----------------------
+command -v fzf &>/dev/null && eval "$(fzf --bash)"
+
+# ---- zoxide -----------------------------------------------
+command -v zoxide &>/dev/null && eval "$(zoxide init bash)"

@@ -84,3 +84,6 @@ unset -f _bashrc_needs_compile _bashrc_compile
 unset _COMPILED
 # _BASHRC_D is kept — config.sh exports BASHRC_D for use by bashrc-compile etc.
 unset _BASHRC_D
+
+# ---- PATH: ~/.local/bin first (after modules) -------------
+PATH="$HOME/.local/bin:${PATH//$HOME\/.local\/bin:}"
