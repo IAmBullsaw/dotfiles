@@ -6,7 +6,7 @@ require functions
 # ============================================================
 
 # --- PATH additions ----------------------------------------
-[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && PATH="${PATH%:}:$HOME/.local/bin"
+# ~/.local/bin is prepended in .bashrc.user after all modules are loaded
 
 # --- Navigation --------------------------------------------
 alias cd..='cd ..'

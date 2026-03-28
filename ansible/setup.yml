@@ -177,6 +177,12 @@
                   "$(git rev-parse --show-toplevel)/nvim/.config/nvim/" \
                   "$NVIM_LOCAL_DIR/"
           fi
+
+          if [[ -n "$NVIM_LOCAL_INSTALL" && -d "$NVIM_LOCAL_INSTALL" && -x "$HOME/.local/bin/nvim" ]]; then
+              rsync -a --delete "$HOME/.local/bin/nvim" "$NVIM_LOCAL_INSTALL/bin/"
+              rsync -a --delete "$HOME/.local/lib64/nvim/" "$NVIM_LOCAL_INSTALL/lib64/"
+              rsync -a --delete "$HOME/.local/share/nvim/" "$NVIM_LOCAL_INSTALL/share/nvim/"
+          fi
         dest: "{{ dotfiles_dir }}/.git/hooks/post-merge"
         mode: "0755"
       tags: dotfiles
