@@ -78,6 +78,18 @@
       when: gh_tmpdir is not skipped
       tags: tools
 
+    # ── bat ────────────────────────────────────────────────────────────────────
+    # Debian/Ubuntu ships bat as batcat; symlink it to the expected name
+
+    - name: Symlink batcat → bat
+      ansible.builtin.file:
+        src: /usr/bin/batcat
+        dest: "{{ local_bin }}/bat"
+        state: link
+        force: false
+      when: ansible_pkg_mgr == "apt"
+      tags: tools
+
     # ── Kitty ──────────────────────────────────────────────────────────────────
 
     - name: Check if kitty is installed
@@ -124,6 +136,7 @@
         dest: "{{ ansible_env.HOME }}/{{ item.dest }}"
         state: link
         force: true
+        follow: false
       loop: "{{ symlinks }}"
       tags: dotfiles
 
@@ -132,5 +145,5 @@
         path: "{{ dotfiles_dir }}/{{ item.src }}"
         mode: "0755"
       loop: "{{ symlinks }}"
-      when: item.dest is match("bin/.*")
+      when: item.dest is search("bin/")
       tags: dotfiles

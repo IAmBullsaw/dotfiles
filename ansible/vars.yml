@@ -68,6 +68,8 @@ pip_packages:
 symlinks:
   - src: bash/.bashrc.user
     dest: .bashrc
+  - src: bash/.bashrc.d
+    dest: .bashrc.d
   - src: kitty/kitty.conf
     dest: .config/kitty/kitty.conf
   - src: zellij/config.kdl
