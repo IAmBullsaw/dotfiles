@@ -66,7 +66,7 @@ alias language='setxkbmap -layout se'
 alias zj="zellij attach -c"
 
 # --- Other -----------------------------------------------------------------
-alias aocurl='python3 ~/Scripts/aocurl.py'
+alias aocurl='python3 ~/Code/scripts/aocurl.py'
 
 # --- add-alias generated aliases -------------------------------------------
 # Keep sorted when editing manually.
