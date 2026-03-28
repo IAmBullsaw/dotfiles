@@ -2,8 +2,8 @@
 # Daily notification reminders — called from cron: notify.sh <type>
 
 _ENV="/proc/$(pgrep -u "$(whoami)" -x mate-session | head -1)/environ"
-export DISPLAY=$(tr '\0' '\n' < "$_ENV" | rg -m1 '^DISPLAY=' | cut -d= -f2-)
-export DBUS_SESSION_BUS_ADDRESS=$(tr '\0' '\n' < "$_ENV" | rg -m1 '^DBUS_SESSION_BUS_ADDRESS=' | cut -d= -f2-)
+export DISPLAY=$(tr '\0' '\n' < "$_ENV" | grep -m1 '^DISPLAY=' | cut -d= -f2-)
+export DBUS_SESSION_BUS_ADDRESS=$(tr '\0' '\n' < "$_ENV" | grep -m1 '^DBUS_SESSION_BUS_ADDRESS=' | cut -d= -f2-)
 
 QUOTES=(
   "The impediment to action advances action. What stands in the way becomes the way. — Marcus Aurelius"

@@ -1,7 +1,7 @@
 layout {
     pane split_direction="vertical"  { 
         pane command="bash" {
-          args "-c" "XDG_CONFIG_HOME=/repo/USER/.config/ XDG_DATA_HOME=/repo/USER/.local/ XDG_STATE_HOME=/repo/USER/.local/state /repo/USER/neovim/bin/nvim"
+          args "-c" "nvim ~/"
           borderless true
           name "Neovim"
         }
