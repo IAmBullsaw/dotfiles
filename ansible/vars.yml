@@ -66,6 +66,12 @@ github_releases:
     tarball: "fzf-0.60.3-linux_amd64.tar.gz"
     binary: fzf
 
+  - name: fd
+    repo: sharkdp/fd
+    version: "10.2.0"
+    tarball: "fd-v10.2.0-x86_64-unknown-linux-musl.tar.gz"
+    binary: fd
+
 # kitty: installed via official binary installer (apt version is too old)
 kitty_install_url: "https://sw.kovidgoyal.net/kitty/installer.sh"
 
