@@ -15,6 +15,7 @@ apt_packages:
   - make
   - python3
   - python3-pip
+  - bat
 
 brew_packages:
   - git
