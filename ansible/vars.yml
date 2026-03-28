@@ -1,7 +1,10 @@
 ---
 dotfiles_dir: "{{ lookup('env', 'HOME') }}/dotfiles"
+local_bin: "{{ ansible_env.HOME }}/.local/bin"
 
-# Packages available in apt (Debian/Ubuntu)
+# ── System packages (distro-maintained, need sudo) ─────────────────────────
+# Base tools where the repo version is fine.
+
 apt_packages:
   - git
   - curl
@@ -12,11 +15,7 @@ apt_packages:
   - make
   - python3
   - python3-pip
-  - neovim
-  - ripgrep
-  - fzf
 
-# Packages available in brew (macOS / Linuxbrew)
 brew_packages:
   - git
   - curl
@@ -25,25 +24,47 @@ brew_packages:
   - gcc
   - make
   - python3
-  - neovim
-  - ripgrep
-  - fzf
-  - kitty
-  - zellij
+
+# ── User tools (GitHub releases -> ~/.local/bin, no sudo) ──────────────────
+# Same version everywhere. Update version here to upgrade.
+# tag_prefix defaults to "v" in the playbook; set to "" for repos that don't use it.
+
+github_releases:
+  - name: zoxide
+    repo: ajeetdsouza/zoxide
+    version: "0.9.2"
+    tarball: "zoxide-0.9.2-x86_64-unknown-linux-musl.tar.gz"
+    binary: zoxide
+
+  - name: zellij
+    repo: zellij-org/zellij
+    version: "0.41.2"
+    tarball: "zellij-x86_64-unknown-linux-musl.tar.gz"
+    binary: zellij
+
+  - name: ripgrep
+    repo: BurntSushi/ripgrep
+    version: "14.1.1"
+    tag_prefix: ""
+    tarball: "ripgrep-14.1.1-x86_64-unknown-linux-musl.tar.gz"
+    binary: rg
+
+  - name: fzf
+    repo: junegunn/fzf
+    version: "0.60.3"
+    tarball: "fzf-0.60.3-linux_amd64.tar.gz"
+    binary: fzf
 
 # kitty: installed via official binary installer (apt version is too old)
 kitty_install_url: "https://sw.kovidgoyal.net/kitty/installer.sh"
-
-# zellij: installed via GitHub release binary (not in apt)
-zellij_version: "v0.41.2"
-zellij_install_dir: "{{ ansible_env.HOME }}/.local/bin"
-zellij_tarball: "zellij-{{ ansible_architecture }}-unknown-linux-musl.tar.gz"
 
 # pip packages (installed for the current user)
 pip_packages:
   - grip
 
-# Dotfile symlinks: src (relative to dotfiles_dir) → dest (in $HOME)
+# ── Dotfile symlinks ───────────────────────────────────────────────────────
+# src (relative to dotfiles_dir) -> dest (relative to $HOME)
+
 symlinks:
   - src: bash/.bashrc.user
     dest: .bashrc

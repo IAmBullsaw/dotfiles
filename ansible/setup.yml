@@ -24,8 +24,6 @@
       when: ansible_pkg_mgr == "brew"
       tags: packages
 
-    # ── pip packages ───────────────────────────────────────────────────────────
-
     - name: Install pip packages
       ansible.builtin.pip:
         name: "{{ pip_packages }}"
@@ -33,8 +31,54 @@
         extra_args: --user
       tags: packages
 
+    # ── User tools (GitHub releases) ───────────────────────────────────────────
+
+    - name: Ensure ~/.local/bin exists
+      ansible.builtin.file:
+        path: "{{ local_bin }}"
+        state: directory
+        mode: "0755"
+      tags: tools
+
+    - name: Check installed GitHub release tools
+      ansible.builtin.stat:
+        path: "{{ local_bin }}/{{ item.binary }}"
+      loop: "{{ github_releases }}"
+      register: gh_tool_stat
+      tags: tools
+
+    - name: Create temp dir for GitHub release tools
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: "gh_tool_"
+      register: gh_tmpdir
+      when: gh_tool_stat.results | selectattr('stat.exists', 'equalto', false) | list | length > 0
+      tags: tools
+
+    - name: Download and extract GitHub release tools
+      ansible.builtin.unarchive:
+        src: "https://github.com/{{ item.item.repo }}/releases/download/{{ item.item.tag_prefix | default('v') }}{{ item.item.version }}/{{ item.item.tarball }}"
+        dest: "{{ gh_tmpdir.path | default('/tmp') }}"
+        remote_src: true
+      loop: "{{ gh_tool_stat.results }}"
+      when: not item.stat.exists and gh_tmpdir is not skipped
+      tags: tools
+
+    - name: Install GitHub release binaries
+      ansible.builtin.shell:
+        cmd: "find {{ gh_tmpdir.path | default('/tmp') }} -name {{ item.item.binary }} -type f -exec cp {} {{ local_bin }}/{{ item.item.binary }} \\; && chmod 755 {{ local_bin }}/{{ item.item.binary }}"
+      loop: "{{ gh_tool_stat.results }}"
+      when: not item.stat.exists and gh_tmpdir is not skipped
+      tags: tools
+
+    - name: Clean up temp dir
+      ansible.builtin.file:
+        path: "{{ gh_tmpdir.path | default(omit) }}"
+        state: absent
+      when: gh_tmpdir is not skipped
+      tags: tools
+
     # ── Kitty ──────────────────────────────────────────────────────────────────
-    # apt version is too old; use the official binary installer instead
 
     - name: Check if kitty is installed
       ansible.builtin.stat:
@@ -46,32 +90,6 @@
       ansible.builtin.shell:
         cmd: "curl -L {{ kitty_install_url }} | sh /dev/stdin launch=n"
       when: not kitty_stat.stat.exists
-      tags: tools
-
-    # ── Zellij ─────────────────────────────────────────────────────────────────
-    # Not in apt; download the release binary directly
-
-    - name: Check if zellij is installed
-      ansible.builtin.stat:
-        path: "{{ zellij_install_dir }}/zellij"
-      register: zellij_stat
-      tags: tools
-
-    - name: Ensure ~/.local/bin exists
-      ansible.builtin.file:
-        path: "{{ zellij_install_dir }}"
-        state: directory
-        mode: "0755"
-      tags: tools
-
-    - name: Install zellij
-      ansible.builtin.unarchive:
-        src: "https://github.com/zellij-org/zellij/releases/download/{{ zellij_version }}/{{ zellij_tarball }}"
-        dest: "{{ zellij_install_dir }}"
-        remote_src: true
-        include:
-          - zellij
-      when: not zellij_stat.stat.exists
       tags: tools
 
     # ── NVM ────────────────────────────────────────────────────────────────────
