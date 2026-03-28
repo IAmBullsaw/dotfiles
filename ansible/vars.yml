@@ -86,8 +86,6 @@ neovim_prefix: "{{ ansible_env.HOME }}/.local"
 # pip packages (installed with --user for the current user)
 # NOTE: pip --user is deprecated on Python 3.11+ (PEP 668). If this breaks
 # on newer distros, switch to pipx or add --break-system-packages.
-pip_packages:
-  - grip
 
 # ── Dotfile symlinks ───────────────────────────────────────────────────────
 # src (relative to dotfiles_dir) -> dest (relative to $HOME)
