@@ -71,18 +71,6 @@
         state: absent
       tags: tools
 
-    # ── bat ────────────────────────────────────────────────────────────────────
-    # Debian/Ubuntu ships bat as batcat; symlink it to the expected name
-
-    - name: Symlink batcat → bat
-      ansible.builtin.file:
-        src: /usr/bin/batcat
-        dest: "{{ local_bin }}/bat"
-        state: link
-        force: false
-      when: ansible_pkg_mgr == "apt"
-      tags: tools
-
     # ── Kitty ──────────────────────────────────────────────────────────────────
 
     - name: Check if kitty is installed

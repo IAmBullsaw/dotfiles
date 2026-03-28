@@ -22,7 +22,6 @@ apt_packages:
   - ninja-build
   - gettext
   - cmake
-  - bat
 
 brew_packages:
   - git
