@@ -46,8 +46,8 @@ _R_CYAN='\e[0;36m'
 export NVM_DIR="$HOME/.nvm"
 BOOKMARK_FILE="$HOME/.bash_bookmarks"
 
-# --- Repos which show a red NaN if SOURCED_gitenv is unset
-# Add/remove reop basenames here (dirname, not path)
+# --- Repos that require environment sourcing before use.
+# Shows a red NaN in prompt if env is not sourced.
 # Overridden in work.sh
 WATCHED_REPOS=(
   "null"
