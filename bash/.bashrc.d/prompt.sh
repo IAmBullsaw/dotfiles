@@ -58,7 +58,9 @@ _build_prompt() {
     local host_part
     host_part="$(get_hostname)$(sourced_file)"
 
-    PS1="${_C_GREEN}[\A]${_C_NC}"
+    PS1=""
+    [[ -n "$VIRTUAL_ENV" ]] && PS1+="${_C_MAGENTA}(${VIRTUAL_ENV##*/})${_C_NC} "
+    PS1+="${_C_GREEN}[\A]${_C_NC}"
     PS1+="${host_part:+ ${host_part}}"
     PS1+=" ${_C_YELLOW}$(_git_branch)${_C_NC}"
     PS1+=" [$(_short_pwd)]"

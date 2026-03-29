@@ -16,6 +16,7 @@ shopt -s cmdhist        # save multi-line commands as one entry
 # --- Core environment --------------------------------------
 export PAGER=less
 export EDITOR=nvim
+export VIRTUAL_ENV_DISABLE_PROMPT=1
 
 # --- History -----------------------------------------------
 export HISTSIZE=-1
@@ -32,6 +33,7 @@ _C_GREEN='\[\e[0;32m\]'
 _C_YELLOW='\[\e[1;33m\]'
 _C_RED='\[\e[0;31m\]'
 _C_CYAN='\[\e[0;36m\]'
+_C_MAGENTA='\[\e[0;35m\]'
 
 #  Raw (non-PS1-escaped) versions for use in echo/printf contexts
 _R_NC='\e[0m'
