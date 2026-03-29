@@ -69,6 +69,5 @@ _build_prompt() {
     PS2="${_C_GREEN}[\A]${_C_NC} ${_C_YELLOW}>${_C_NC} "
 }
 
-# PROMPT_COMMAND is set in work.sh after zoxide init, so the order is correct.
-# If work.sh is not present, set a sensible default here.
-[[ -z "${PROMPT_COMMAND+x}" ]] && PROMPT_COMMAND="_build_prompt"
+# Prepend _build_prompt so it always runs, regardless of what zoxide/work.sh set.
+PROMPT_COMMAND="_build_prompt${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
