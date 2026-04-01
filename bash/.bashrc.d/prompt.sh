@@ -5,7 +5,7 @@ require config
 # ============================================================
 
 # --- Git branch (single call, no sed fork) -----------------
-_git_branch() {
+_prompt_git_branch() {
     local b
     b=$(git symbolic-ref --short HEAD 2>/dev/null) \
         || { git rev-parse --git-dir &>/dev/null && b='(detached)'; } \
@@ -62,7 +62,7 @@ _build_prompt() {
     [[ -n "$VIRTUAL_ENV" ]] && PS1+="${_C_MAGENTA}(${VIRTUAL_ENV##*/})${_C_NC} "
     PS1+="${_C_GREEN}[\A]${_C_NC}"
     PS1+="${host_part:+ ${host_part}}"
-    PS1+=" ${_C_YELLOW}$(_git_branch)${_C_NC}"
+    PS1+=" ${_C_YELLOW}$(_prompt_git_branch)${_C_NC}"
     PS1+=" [$(_short_pwd)]"
     PS1+="$(_vim_indicator) "
 
