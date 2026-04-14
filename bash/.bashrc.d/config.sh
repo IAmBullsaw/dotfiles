@@ -47,6 +47,7 @@ _R_CYAN='\e[0;36m'
 # --- Paths -------------------------------------------------
 export NVM_DIR="$HOME/.nvm"
 BOOKMARK_FILE="$HOME/.bash_bookmarks"
+PATH="$HOME/.local/bin:${PATH//$HOME\/.local\/bin:}"
 
 # --- fzf + fd integration ---------------------------------
 if command -v fd &>/dev/null; then
