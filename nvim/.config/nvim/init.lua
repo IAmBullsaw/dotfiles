@@ -90,6 +90,10 @@ P.S. You can delete this when you're done too. It's your config now! :)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
+-- Disable netrw so alpha-nvim can be the startup screen
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
+
 -- Set to true if you have a Nerd Font installed and selected in the terminal
 vim.g.have_nerd_font = true
 
@@ -822,6 +826,17 @@ require('lazy').setup({
       end
       
       alpha.setup(dashboard.config)
+
+      -- Open alpha when nvim is started with a directory argument
+      vim.api.nvim_create_autocmd('VimEnter', {
+        callback = function()
+          if vim.fn.argc() == 1 and vim.fn.isdirectory(vim.fn.argv(0)) == 1 then
+            vim.cmd('bd')           -- close the empty directory buffer
+            vim.cmd('cd ' .. vim.fn.argv(0))
+            require('alpha').start()
+          end
+        end,
+      })
     end
   },
 
