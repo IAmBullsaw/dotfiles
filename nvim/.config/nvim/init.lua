@@ -456,6 +456,21 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>fh', builtin.help_tags, { desc = '[F]ind [H]elp' })
       vim.keymap.set('n', '<leader>fk', builtin.keymaps, { desc = '[F]ind [K]eymaps' })
       vim.keymap.set('n', '<leader>ff', function() builtin.find_files { hidden = true } end, { desc = '[F]ind [F]iles' })
+      vim.keymap.set('n', '<leader>fa', function()
+        builtin.find_files {
+          hidden = true,
+          search_dirs = {
+            '/home/USER/.kiro',
+            '/home/USER/dotfiles',
+            '/home/USER/Code',
+            '/proj/lmr_usr/USER',
+            '/repo/USER/rpcppg2/rpc/bb_ue',
+            '/repo/USER/gojirago',
+            '/repo/USER/flow',
+          },
+          file_ignore_patterns = { 'node_modules/', '%.git/' },
+        }
+      end, { desc = '[F]ind [A]ll (everywhere)' })
       vim.keymap.set('n', '<leader>fs', builtin.builtin, { desc = '[F]ind [S]elect Telescope' })
       vim.keymap.set({ 'n', 'v' }, '<leader>fw', builtin.grep_string, { desc = '[F]ind current [W]ord' })
       vim.keymap.set('n', '<leader>fg', builtin.live_grep, { desc = '[F]ind by [G]rep' })
@@ -675,68 +690,66 @@ require('lazy').setup({
         return lines
       end
       
+      -- Friendly display names for sessions (raw name → display name)
+      local session_display_names = {
+        ['_repo_USER_rpcppg2_rpc_bb_ue'] = 'bb-ue',
+        ['_home_USER_dotfiles'] = 'dotfiles',
+        ['_home_USER_Code_vault'] = 'vault',
+        ['_repo_USER_ran_sysdoc'] = 'ran-sysdoc',
+        ['_repo_USER_tc-docs'] = 'tc-docs',
+      }
+      
+      local function session_display(name)
+        return session_display_names[name] or name:gsub('^_', ''):gsub('_', '/')
+      end
+      
       -- Function to build dashboard
       local function build_dashboard()
         local buttons = {}
-        local project = require('project')
-        local recent_projects = project.get_recent_projects() or {}
-        
-        -- Get resession sessions
         local resession = require('resession')
         local sessions = resession.list()
         
-        -- Convert to table format
-        local session_list = {}
-        for _, name in ipairs(sessions) do
-          table.insert(session_list, { name = name })
-        end
-        sessions = session_list
-        
-        -- Sort projects by name
-        
-        -- Sort projects by name
-        table.sort(recent_projects, function(a, b)
-          return vim.fn.fnamemodify(a, ":t") < vim.fn.fnamemodify(b, ":t")
+        -- Sort sessions by display name
+        table.sort(sessions, function(a, b)
+          return session_display(a) < session_display(b)
         end)
         
-        -- Add project slots (always 5)
+        -- Sessions as primary slots (1-5)
         for i = 1, 5 do
-          if i <= #recent_projects then
-            local proj = recent_projects[i]
-            local name = vim.fn.fnamemodify(proj, ":t")
-            local btn = dashboard.button(tostring(i), "  " .. name, ":cd " .. proj .. " | Telescope find_files<CR>")
-            btn.opts.hl = "String"
+          if i <= #sessions then
+            local name = sessions[i]
+            local display = session_display(name)
+            local load_cmd = string.format(":lua require('resession').load('%s', { notify = true })<CR>", name)
+            local btn = dashboard.button(tostring(i), "  " .. display, load_cmd)
+            btn.opts.hl = "Identifier"
             btn.opts.hl_shortcut = "Number"
             table.insert(buttons, btn)
           else
-            local btn = dashboard.button(tostring(i), "  <empty>", ":Telescope projects<CR>")
+            local btn = dashboard.button(tostring(i), "  <empty>", ":lua _G.resession_picker()<CR>")
             btn.opts.hl = "Comment"
             btn.opts.hl_shortcut = "Number"
             table.insert(buttons, btn)
           end
         end
-        table.insert(buttons, dashboard.button("", ""))
         
-        -- Sort sessions alphabetically
-        table.sort(sessions, function(a, b)
-          return a.name < b.name
+        -- Compact project list
+        table.insert(buttons, dashboard.button("", ""))
+        local project = require('project')
+        local recent_projects = project.get_recent_projects(true) or {}
+        table.sort(recent_projects, function(a, b)
+          local pa = type(a) == 'table' and a.path or a
+          local pb = type(b) == 'table' and b.path or b
+          return vim.fn.fnamemodify(pa, ":t") < vim.fn.fnamemodify(pb, ":t")
         end)
         
-        -- Add session slots (always 5)
-        local session_keys = {"a", "b", "c", "d", "e"}
-        
-        for i = 1, 5 do
-          if i <= #sessions then
-            local session = sessions[i]
-            local session_name = session.name
-            local load_cmd = string.format(":lua require('resession').load('%s', { notify = true })<CR>", session_name)
-            local btn = dashboard.button(session_keys[i], "  " .. session_name, load_cmd)
-            btn.opts.hl = "Identifier"
-            btn.opts.hl_shortcut = "Character"
-            table.insert(buttons, btn)
-          else
-            local btn = dashboard.button(session_keys[i], "  <empty>", ":lua _G.resession_picker()<CR>")
-            btn.opts.hl = "Comment"
+        local project_keys = {"a", "b", "c"}
+        for i = 1, 3 do
+          if i <= #recent_projects then
+            local entry = recent_projects[i]
+            local path = type(entry) == 'table' and entry.path or entry
+            local name = type(entry) == 'table' and entry.name or vim.fn.fnamemodify(path, ":t")
+            local btn = dashboard.button(project_keys[i], "  " .. name, ":cd " .. path .. " | Telescope find_files<CR>")
+            btn.opts.hl = "String"
             btn.opts.hl_shortcut = "Character"
             table.insert(buttons, btn)
           end
@@ -768,7 +781,7 @@ require('lazy').setup({
       -- Add compact menu hint
       local hint = {
         type = "text",
-        val = "p:Projects  s:Sessions  f:Files  r:Recent  c:Config  q:Quit",
+        val = "s:Sessions  p:Projects  f:Files  r:Recent  c:Config  q:Quit",
         opts = { position = "center", hl = "Comment" }
       }
       
@@ -1118,6 +1131,7 @@ require('lazy').setup({
         },
         opts = {},
       },
+      { 'saghen/blink.compat', version = '*', opts = {} },
     },
     --- @module 'blink.cmp'
     --- @type blink.cmp.Config
@@ -1164,6 +1178,14 @@ require('lazy').setup({
 
       sources = {
         default = { 'lsp', 'path', 'snippets' },
+        per_filetype = {
+          markdown = { 'lsp', 'path', 'snippets', 'obsidian', 'obsidian_new', 'obsidian_tags' },
+        },
+        providers = {
+          obsidian = { name = 'cmp_obsidian', module = 'blink.compat.source' },
+          obsidian_new = { name = 'cmp_obsidian_new', module = 'blink.compat.source' },
+          obsidian_tags = { name = 'cmp_obsidian_tags', module = 'blink.compat.source' },
+        },
       },
 
       snippets = { preset = 'luasnip' },
@@ -1287,7 +1309,7 @@ require('lazy').setup({
   --    This is the easiest way to modularize your config.
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
-  -- { import = 'custom.plugins' },
+  { import = 'custom.plugins' },
   --
   -- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
   -- Or use telescope!
