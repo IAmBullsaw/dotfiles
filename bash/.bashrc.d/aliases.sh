@@ -71,6 +71,7 @@ alias unmount-rpi5='fusermount -u /home/bullen/projects/homelab/rpi5'
 
 # --- Other -----------------------------------------------------------------
 alias aocurl='python3 ~/Code/scripts/aocurl.py'
+alias redact='python3 ~/Code/scripts/redact.py'
 
 # --- add-alias generated aliases -------------------------------------------
 # Keep sorted when editing manually.

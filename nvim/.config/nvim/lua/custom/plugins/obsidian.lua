@@ -1,0 +1,76 @@
+return {
+  'epwalsh/obsidian.nvim',
+  version = '*',
+  lazy = true,
+  ft = 'markdown',
+  dependencies = {
+    'nvim-lua/plenary.nvim',
+  },
+  opts = {
+    workspaces = {
+      {
+        name = 'vault',
+        path = '~/Code/vault',
+      },
+    },
+
+    daily_notes = {
+      folder = 'daily',
+      date_format = '%Y-%m-%d',
+      template = nil,
+    },
+
+    -- Use wiki links [[like this]]
+    wiki_link_func = 'use_alias_only',
+    preferred_link_style = 'wiki',
+
+    -- Don't prepend note id to filenames
+    note_id_func = function(title)
+      return title
+    end,
+
+    -- Don't add frontmatter by default (Foam doesn't require it)
+    disable_frontmatter = true,
+
+    -- Completion (via blink.compat)
+    completion = {
+      nvim_cmp = true,
+      min_chars = 2,
+    },
+
+    -- Open URLs in browser
+    follow_url_func = function(url)
+      vim.fn.jobstart({ 'xdg-open', url })
+    end,
+
+    -- Mappings scoped to markdown buffers in vault
+    mappings = {
+      ['gf'] = {
+        action = function()
+          return require('obsidian').util.gf_passthrough()
+        end,
+        opts = { noremap = false, expr = true, buffer = true },
+      },
+      ['<cr>'] = {
+        action = function()
+          return require('obsidian').util.smart_action()
+        end,
+        opts = { buffer = true, expr = true },
+      },
+    },
+
+    ui = {
+      enable = false,
+    },
+  },
+
+  keys = {
+    { '<leader>on', '<cmd>ObsidianNew<cr>', desc = '[O]bsidian [N]ew note' },
+    { '<leader>oo', '<cmd>ObsidianQuickSwitch<cr>', desc = '[O]bsidian [O]pen note' },
+    { '<leader>os', '<cmd>ObsidianSearch<cr>', desc = '[O]bsidian [S]earch' },
+    { '<leader>od', '<cmd>ObsidianToday<cr>', desc = '[O]bsidian [D]aily note' },
+    { '<leader>ob', '<cmd>ObsidianBacklinks<cr>', desc = '[O]bsidian [B]acklinks' },
+    { '<leader>ol', '<cmd>ObsidianLinks<cr>', desc = '[O]bsidian [L]inks' },
+    { '<leader>ot', '<cmd>ObsidianTags<cr>', desc = '[O]bsidian [T]ags' },
+  },
+}
