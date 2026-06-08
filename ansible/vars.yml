@@ -122,3 +122,5 @@ symlinks:
     dest: .local/bin/logbook
   - src: scripts/reg.py
     dest: .local/bin/reg
+  - src: scripts/forgejo.py
+    dest: .local/bin/forgejo
