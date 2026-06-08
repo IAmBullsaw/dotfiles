@@ -248,6 +248,9 @@ class Forge:
                     case "label-remove":
                         self.label_remove(op["issue"], op["label"])
                         results.append({"cmd": cmd, "issue": op["issue"], "status": "ok"})
+                    case "show":
+                        self.issue_show(op["issue"], op.get("comments", False))
+                        results.append({"cmd": cmd, "issue": op["issue"], "status": "ok"})
                     case _:
                         print(f"[{i}] unknown cmd '{cmd}' — skipped", file=sys.stderr)
                         results.append({"cmd": cmd, "status": "skipped", "reason": "unknown cmd"})
