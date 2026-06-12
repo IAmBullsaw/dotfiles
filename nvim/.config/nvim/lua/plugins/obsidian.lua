@@ -20,30 +20,24 @@ return {
       template = nil,
     },
 
-    -- Use wiki links [[like this]]
     wiki_link_func = 'use_alias_only',
     preferred_link_style = 'wiki',
 
-    -- Don't prepend note id to filenames
     note_id_func = function(title)
       return title
     end,
 
-    -- Don't add frontmatter by default (Foam doesn't require it)
     disable_frontmatter = true,
 
-    -- Completion (via blink.compat)
     completion = {
       nvim_cmp = true,
       min_chars = 2,
     },
 
-    -- Open URLs in browser
     follow_url_func = function(url)
       vim.fn.jobstart({ 'xdg-open', url })
     end,
 
-    -- Mappings scoped to markdown buffers in vault
     mappings = {
       ['gf'] = {
         action = function()
