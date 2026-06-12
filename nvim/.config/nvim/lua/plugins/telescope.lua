@@ -45,17 +45,11 @@ return {
     vim.keymap.set('n', '<leader>fk', builtin.keymaps, { desc = '[F]ind [K]eymaps' })
     vim.keymap.set('n', '<leader>ff', function() builtin.find_files { hidden = true } end, { desc = '[F]ind [F]iles' })
     vim.keymap.set('n', '<leader>fa', function()
+      local ok, work = pcall(require, 'work')
+      local dirs = ok and work.search_dirs or { vim.fn.expand('~') }
       builtin.find_files {
         hidden = true,
-        search_dirs = {
-          '/home/USER/.kiro',
-          '/home/USER/dotfiles',
-          '/home/USER/Code',
-          '/proj/lmr_usr/USER',
-          '/repo/USER/rpcppg2/rpc/bb_ue',
-          '/repo/USER/gojirago',
-          '/repo/USER/flow',
-        },
+        search_dirs = dirs,
         file_ignore_patterns = { 'node_modules/', '%.git/' },
       }
     end, { desc = '[F]ind [A]ll (everywhere)' })

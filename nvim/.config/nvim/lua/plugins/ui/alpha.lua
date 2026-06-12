@@ -22,13 +22,8 @@ return {
       return lines
     end
 
-    local session_display_names = {
-      ['_repo_USER_rpcppg2_rpc_bb_ue'] = 'bb-ue',
-      ['_home_USER_dotfiles'] = 'dotfiles',
-      ['_home_USER_Code_vault'] = 'vault',
-      ['_repo_USER_ran_sysdoc'] = 'ran-sysdoc',
-      ['_repo_USER_tc-docs'] = 'tc-docs',
-    }
+    local ok, work = pcall(require, 'work')
+    local session_display_names = ok and work.session_display_names or {}
 
     local function session_display(name)
       return session_display_names[name] or name:gsub('^_', ''):gsub('_', '/')
