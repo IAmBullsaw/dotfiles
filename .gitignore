@@ -1,3 +1,4 @@
 logbook/logbook.md
 bash/.bashrc.d/compiled
 
+nvim/.config/nvim/lua/work.lua
