@@ -1,0 +1,343 @@
+# Canonical issue-tracking workflow for all personal Forgejo repos.
+# Referenced from each repo's CLAUDE.md — this is the one copy; repos
+# should link here, not duplicate the content.
+#
+# Enforced by:
+#   - forgejo.py ensure-labels   (priority labels: p1-critical..p4-low)
+#   - Forgejo's native dependency relationships (no blocked-by/depends-on labels)
+#   - Claude Code, per the ai_behavior section below, when working in a repo
+#     whose CLAUDE.md links here
+#
+# Background/rationale (from research done 2026-08-09, see overblick session):
+#   - No story points/size: estimation reconciles *different people's*
+#     judgment of effort; solo, there's nothing to reconcile. Matches the
+#     #NoEstimates position and Linear's estimates-off-by-default default.
+#   - No category/type labels: GitHub added a separate "Issue Types" field
+#     in 2024 specifically because labels end up carrying type+priority+
+#     component at once and become ambiguous. Forgejo has no such field,
+#     so category labels get skipped entirely rather than half-solved.
+#   - Dependencies as relationships, not labels: GitLab/GitHub/Jira/Linear
+#     all treat blocked-by as a structured link. Forgejo has this natively
+#     (repos/{owner}/{repo}/issues/{index}/dependencies) — verified present
+#     on this instance.
+#   - 4 priority levels: matches Linear (5, incl. "no priority") and
+#     GitHub's informal P0-P3 — more granularity trends toward "everything
+#     is High" and stops meaning anything.
+
+workflow:
+  name: "Issue-Driven AI Development"
+
+  philosophy:
+    - "Every unit of work gets exactly one issue."
+    - "A unit of work should be small enough that a human and AI can hold its context easily."
+    - "Issues are the long-term memory and knowledge base for the project."
+    - "The issue description is the canonical source of truth."
+    - "Comments are temporary working notes, not the final record."
+    - "When work produces a new independent unit of work, create a new issue instead of expanding the current issue indefinitely."
+    - "Prefer a small number of focused issues over large issues containing many unrelated decisions."
+
+  issue_sizing:
+    principle: "One issue = one coherent unit of work"
+    examples:
+      - "Implement one feature component"
+      - "Investigate one technical question"
+      - "Fix one bug"
+      - "Perform one migration"
+      - "Perform one security improvement"
+      - "Update one subsystem"
+    split_issue_when:
+      - "The work contains multiple independent decisions."
+      - "The work can be completed independently."
+      - "A new discovery creates a separate actionable task."
+      - "The issue becomes too large to understand as a single context."
+
+  issue_system:
+    priority:
+      enabled: true
+      values:
+        p1: "critical"
+        p2: "high"
+        p3: "normal"
+        p4: "low"
+      rules:
+        - "Use priority only for urgency/importance."
+        - "Do not use story points or size labels."
+        - "Do not create additional priority levels without a strong reason."
+
+    labels:
+      principle: "Keep labels minimal."
+      use_for:
+        - "priority"
+      avoid:
+        - "story points"
+        - "size"
+        - "categories"
+        - "issue types when they can be expressed by the issue content"
+        - "dependencies"
+        - "individual decisions"
+        - "individual discoveries"
+      rationale:
+        - "Labels become ambiguous when they represent multiple dimensions."
+        - "Decisions and discoveries are better represented by searchable IDs."
+
+    dependencies:
+      use_native_dependencies: true
+      rule: "Use Forgejo's native dependency relationships."
+      avoid:
+        - "blocked-by labels"
+        - "depends-on labels"
+
+  issue_description:
+    role: "Canonical, curated record of the work."
+    principle: "Rewrite and maintain the description as understanding evolves."
+    should_contain:
+      - "Purpose"
+      - "Current status"
+      - "Success criteria"
+      - "Current understanding"
+      - "Decisions"
+      - "Discoveries"
+      - "Progress"
+      - "Next steps"
+      - "Lessons learned"
+      - "Related issues"
+    should_not_be:
+      - "A raw transcript of the AI conversation"
+      - "An append-only progress log"
+      - "A collection of obsolete plans"
+
+  comments:
+    role: "Temporary working space."
+    use_for:
+      - "Intermediate discussion"
+      - "Experiments"
+      - "Questions"
+      - "Temporary findings"
+      - "Communication during implementation"
+    rules:
+      - "Do not use comments as the primary status record."
+      - "Promote important conclusions into the issue description."
+      - "When a discussion produces a durable decision, record it in the Decisions section."
+      - "When a discovery is useful beyond the immediate discussion, record it in Discoveries or Lessons Learned."
+
+  knowledge_records:
+    principle: "Decisions and discoveries are first-class searchable knowledge."
+
+    decisions:
+      identifier:
+        format: "DEC-{issue_number}-{sequence}"
+        example: "DEC-140-001"
+      meaning: "A choice that was made."
+      rules:
+        - "Every durable decision gets a unique DEC-* ID."
+        - "Do not create labels for individual decisions."
+        - "Reference the DEC-* ID when another issue or decision depends on it."
+      fields:
+        - "ID"
+        - "Decision"
+        - "Reason"
+        - "Alternatives considered, when relevant"
+      example:
+        id: "DEC-140-001"
+        decision: "Use Tandoor instead of Mealie."
+        reason: "Tandoor provides server-side OIDC redirects and works better with the existing authentication architecture."
+        alternatives:
+          - "Keep Mealie"
+        status: "accepted"
+
+    discoveries:
+      identifier:
+        format: "DISC-{issue_number}-{sequence}"
+        example: "DISC-140-001"
+      meaning: "A fact, behavior, constraint, observation, or insight learned during the work."
+      rules:
+        - "Every durable discovery gets a unique DISC-* ID."
+        - "Do not create labels for individual discoveries."
+        - "Record discoveries that are surprising, reusable, constrain future work, or explain system behavior."
+        - "Do not create DISC-* entries for trivial implementation details."
+        - "Reference the DISC-* ID when another issue relies on the discovery."
+      fields:
+        - "ID"
+        - "Discovery"
+        - "Context or evidence, when useful"
+        - "Relevance, when useful"
+      example:
+        id: "DISC-140-001"
+        discovery: "Tandoor requires client_secret_post for this OIDC configuration."
+        context: "Discovered while configuring the Authelia OIDC integration."
+        relevance: "Useful when configuring future OIDC integrations."
+
+  ai_behavior:
+    role: "Claude Code actively maintains the issue as project memory."
+
+    before_work:
+      - "Read the issue description completely."
+      - "Read related issues when relevant."
+      - "Understand current status, decisions, discoveries, and next steps before making changes."
+      - "Check dependencies before starting work."
+      - "Search for relevant DEC-* and DISC-* records when they may affect the work."
+
+    during_work:
+      - "Use comments for temporary discussion when appropriate."
+      - "Do not continuously append status updates to the issue description."
+      - "Update the canonical sections when the understanding changes."
+      - "Record important decisions using DEC-{issue}-{sequence}."
+      - "Record durable technical discoveries using DISC-{issue}-{sequence}."
+      - "Reference existing DEC-* and DISC-* records rather than duplicating their content."
+      - "If new independent work is discovered, create a new issue instead of expanding the current issue."
+
+    after_work:
+      - "Update the issue description to reflect the final state."
+      - "Mark completed work clearly."
+      - "Record important decisions."
+      - "Record important discoveries."
+      - "Record relevant lessons learned."
+      - "Add links to related issues."
+      - "Close the issue when its success criteria are satisfied."
+
+    description_quality:
+      - "Prefer concise, curated information over exhaustive transcripts."
+      - "Remove or rewrite obsolete information."
+      - "The description must describe the current truth."
+      - "Do not preserve outdated plans as if they were still valid."
+      - "Preserve important historical decisions and discoveries even when the current plan changes."
+
+  issue_types:
+    standard:
+      use_for: "Normal implementation, fixes, updates, and small units of work."
+
+    investigation:
+      use_for: "Exploration where the outcome is not yet known."
+      emphasis:
+        - "Question"
+        - "Current understanding"
+        - "Findings"
+        - "Discoveries"
+        - "Alternatives"
+        - "Recommendation"
+        - "Decision"
+        - "Follow-up issues"
+
+    parent:
+      use_for: "Large initiatives containing multiple independent units of work."
+      rule: "Act primarily as an index and high-level context."
+      avoid: "Duplicating detailed implementation progress from child issues."
+
+  knowledge_management:
+    principle: "Issues form a lightweight project knowledge graph."
+
+    relationships:
+      dependencies:
+        description: "Execution relationship between issues."
+        mechanism: "Forgejo native dependency relationship."
+
+      related_issues:
+        description: "Conceptual or contextual relationship between issues."
+
+      decisions:
+        description: "Searchable record of choices made."
+        identifier: "DEC-*"
+
+      discoveries:
+        description: "Searchable record of things learned."
+        identifier: "DISC-*"
+
+    retrieval:
+      principle: "Important project knowledge should be discoverable through plain-text identifiers."
+      searchable_identifiers:
+        - "DEC-*"
+        - "DISC-*"
+      rules:
+        - "Do not rely on labels as the primary retrieval mechanism for decisions or discoveries."
+        - "Use identifiers that can be searched across the repository and issue tracker."
+
+    goal:
+      - "A future AI agent should be able to understand why the system is the way it is."
+      - "A human should be able to understand the current state without reading the entire conversation."
+      - "Historical context should remain available without turning the issue into a transcript."
+      - "Knowledge discovered in one issue should be reusable by future issues."
+
+  issue_template:
+    title: "<short description of the unit of work>"
+
+    sections:
+      purpose:
+        description: "Why does this issue exist?"
+
+      success_criteria:
+        description: "What must be true for this issue to be considered complete?"
+
+      current_status:
+        description: "Current state in one or two concise sentences."
+
+      current_understanding:
+        description: "Relevant technical or contextual understanding."
+
+      decisions:
+        description: "Durable decisions made during this work."
+
+      discoveries:
+        description: "Important things learned during investigation or implementation."
+
+      progress:
+        completed:
+          description: "What has been completed."
+        next:
+          description: "What remains, if anything."
+
+      lessons_learned:
+        description: "Reusable knowledge worth preserving."
+
+      related_issues:
+        description: "Links to parent, child, dependency, or conceptually related issues."
+
+    decision_format: |
+      ### DEC-<issue-number>-<sequence>: <short decision>
+
+      **Decision:** <what was decided>
+
+      **Reason:** <why>
+
+      **Alternatives considered:** <optional>
+
+    discovery_format: |
+      ### DISC-<issue-number>-<sequence>: <short discovery>
+
+      **Discovery:** <what was learned>
+
+      **Context:** <how or where it was discovered>
+
+      **Relevance:** <why it matters, if useful>
+
+    status_values:
+      - "open"
+      - "in_progress"
+      - "blocked"
+      - "done"
+
+    completion_rule:
+      - "Success criteria satisfied."
+      - "Current state documented."
+      - "Important decisions recorded."
+      - "Important discoveries recorded."
+      - "Follow-up work moved into separate issues where appropriate."
+      - "Issue closed."
+
+  core_rules:
+    - "One issue = one coherent unit of work."
+    - "Small issues are preferred."
+    - "Priority is P1-P4."
+    - "No story points."
+    - "No size labels."
+    - "Avoid category-label taxonomies."
+    - "Use native dependencies."
+    - "Do not use labels for individual decisions."
+    - "Do not use labels for individual discoveries."
+    - "Use DEC-* identifiers for decisions."
+    - "Use DISC-* identifiers for discoveries."
+    - "Description = canonical current truth."
+    - "Comments = temporary working space."
+    - "Decisions and durable discoveries get promoted into the description."
+    - "New independent work gets a new issue."
+    - "Close issues when their success criteria are satisfied."
+    - "Optimize issues for both human readability and AI context."

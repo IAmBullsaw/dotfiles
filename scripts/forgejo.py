@@ -13,6 +13,21 @@ import urllib.parse
 import urllib.request
 import zipfile
 
+# The standard priority label set — see scripts/issue-workflow.yaml for the
+# full convention this is one piece of. Colors/descriptions match the set
+# already in use on pant (the oldest repo carrying it), kept identical here
+# so a repo backfilled by ensure-labels looks the same as one set up by hand.
+STANDARD_LABELS = [
+    {"name": "p1-critical", "color": "e11d48",
+     "description": "Critical — blocks normal operation or risks data loss"},
+    {"name": "p2-high", "color": "e4606d",
+     "description": "High — significant issue, address soon"},
+    {"name": "p3-normal", "color": "0075ca",
+     "description": "Normal — standard backlog item"},
+    {"name": "p4-low", "color": "cfd3d7",
+     "description": "Low — nice to have, no urgency"},
+]
+
 
 def _git_credential_token(host):
     proc = subprocess.run(
@@ -169,6 +184,26 @@ class Forge:
         ids = [l["id"] for l in current] + [lid]
         self._replace_labels(issue, ids)
         print(f"#{issue} + '{name}'")
+
+    def ensure_labels(self):
+        """Idempotently create any missing labels from STANDARD_LABELS.
+        Never touches labels already present, standard or not — additive only."""
+        existing = self._labels()
+        created = []
+        for label in STANDARD_LABELS:
+            if label["name"] in existing:
+                continue
+            result = self._req("POST", "/labels", {
+                "name": label["name"],
+                "color": label["color"],
+                "description": label["description"],
+            })
+            self._label_map[label["name"]] = result["id"]
+            created.append(label["name"])
+        if created:
+            print(f"{self.repo}: created {', '.join(created)}")
+        else:
+            print(f"{self.repo}: already has the standard set")
 
     def label_remove(self, issue, name):
         lid = self._label_id(name)
@@ -372,6 +407,8 @@ def main():
     c.add_argument("issue", type=int)
     c.add_argument("label")
 
+    c = sub.add_parser("ensure-labels", help="Create the standard priority labels if missing (additive, idempotent)")
+
     c = sub.add_parser("label-remove", help="Remove a label by name")
     c.add_argument("issue", type=int)
     c.add_argument("label")
@@ -417,6 +454,7 @@ def main():
         case "show":         f.issue_show(args.issue, args.comments)
         case "comment":      f.comment(args.issue, args.message)
         case "reopen":       f.reopen(args.issue)
+        case "ensure-labels": f.ensure_labels()
         case "label-add":    f.label_add(args.issue, args.label)
         case "label-remove": f.label_remove(args.issue, args.label)
         case "set-priority": f.set_priority(args.issue, args.priority, args.reason)
