@@ -4,6 +4,7 @@
 import argparse
 import io
 import json
+import os
 import re
 import subprocess
 import sys
@@ -25,9 +26,26 @@ def _git_credential_token(host):
     sys.exit(f"No credentials found for {host} in git credential store")
 
 
+def _resolve_token(host):
+    # Repo-local, per-identity token file — avoids the single global
+    # git-credential-store entry per host, which any process touching that
+    # host can silently overwrite for every other process using it.
+    identity = os.environ.get("FORGEJO_IDENTITY", "bullen")
+    token_file = os.path.join(_repo_root(), ".git", "forgejo", f"token-{identity}")
+    if os.path.isfile(token_file):
+        with open(token_file) as f:
+            token = f.read().strip()
+        if token:
+            return token
+    return _git_credential_token(host)
+
+
 def _git_remote_info():
+    # git config --get (not "remote get-url") to bypass any url.<x>.insteadOf
+    # rewriting — the API always needs the real HTTPS host, regardless of
+    # what transport git actually uses to fetch/push.
     proc = subprocess.run(
-        ["git", "remote", "get-url", "origin"],
+        ["git", "config", "--get", "remote.origin.url"],
         capture_output=True, text=True, cwd=_repo_root(),
     )
     url = proc.stdout.strip()
@@ -48,7 +66,7 @@ def _repo_root():
 class Forge:
     def __init__(self):
         self.host, self.repo = _git_remote_info()
-        self.token = _git_credential_token(self.host)
+        self.token = _resolve_token(self.host)
         self.base = f"https://{self.host}/api/v1/repos/{self.repo}"
         self._label_map = None  # name → id
 
