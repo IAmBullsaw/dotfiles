@@ -105,9 +105,42 @@ class Forge:
             body = e.read().decode()
             sys.exit(f"HTTP {e.code} {method} {url}\n{body}")
 
+    # Forgejo silently caps per-page results at this many, whatever `limit` asks
+    # for. Measured against a repo with 84 open issues: limit=49 returns 49,
+    # limit=51 and limit=100 both return 50, and page=2 returns the remaining 34.
+    # So a response of exactly PAGE_MAX items means "there may be more", never
+    # "that is all" -- which is how an audit once reported "all 50 issues" for a
+    # repo that had 71. See konserver.lol#215.
+    PAGE_MAX = 50
+
+    def _paged(self, path, max_items=None):
+        """GET every page until a short one comes back.
+
+        Stops early once max_items is reached, so callers that only want a
+        screenful do not walk the whole list.
+        """
+        sep = "&" if "?" in path else "?"
+        out = []
+        page = 1
+        while True:
+            batch = self._req("GET", f"{path}{sep}limit={self.PAGE_MAX}&page={page}")
+            if not batch:
+                break
+            out.extend(batch)
+            # A short page is the only reliable end-of-list signal.
+            if len(batch) < self.PAGE_MAX:
+                break
+            if max_items is not None and len(out) >= max_items:
+                break
+            page += 1
+        return out[:max_items] if max_items is not None else out
+
     def _labels(self):
         if self._label_map is None:
-            data = self._req("GET", "/labels?limit=50")
+            # Paginated for the same reason as issues: a repo with more than
+            # PAGE_MAX labels would otherwise fail to find the ones past the cap,
+            # reporting "label not found" for a label that exists.
+            data = self._paged("/labels")
             self._label_map = {l["name"]: l["id"] for l in data}
         return self._label_map
 
@@ -131,10 +164,14 @@ class Forge:
     # --- issue list / show ---
 
     def issues_list(self, state="open", label=None, limit=30):
-        params = f"?type=issues&state={state}&limit={limit}"
+        params = f"?type=issues&state={state}"
         if label:
             params += f"&labels={urllib.parse.quote(label)}"
-        data = self._req("GET", f"/issues{params}")
+        # Ask for one more than needed: if it arrives, there is a next page and
+        # the footer below says so rather than letting the cut-off pass silently.
+        data = self._paged(f"/issues{params}", max_items=limit + 1)
+        more = len(data) > limit
+        data = data[:limit]
         if not data:
             print("No issues found.")
             return
@@ -146,6 +183,8 @@ class Forge:
             if tty and len(title) > 60:
                 title = title[:57] + "..."
             print(f"{idx:<6} {title:<62} {labels}")
+        if more:
+            print(f"\n(showing {limit}; more exist -- raise --limit to see them)")
 
     def issue_show(self, number, comments=False):
         data = self._req("GET", f"/issues/{number}")
