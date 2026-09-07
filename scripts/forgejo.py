@@ -417,9 +417,54 @@ class Forge:
                     print("─" * 60)
                     print(content)
         except urllib.error.HTTPError as e:
-            print(f"  (log API returned HTTP {e.code} — web URL: {r['url']})")
+            if not self._ci_logs_from_disk(run_id):
+                print(f"  (log API returned HTTP {e.code} — web URL: {r['url']})")
         except zipfile.BadZipFile:
-            print(f"  (unexpected response format — web URL: {r['url']})")
+            if not self._ci_logs_from_disk(run_id):
+                print(f"  (unexpected response format — web URL: {r['url']})")
+
+    # Forgejo 15.0.2 (gitea-1.22) serves no log endpoint under /api/v1 -- every
+    # variant of runs/<id>/logs, runs/<id>/jobs and jobs/<id>/logs returns 404,
+    # so the API path above can never work on this instance. When Forgejo runs
+    # on the same host, its on-disk log store is the fallback:
+    #
+    #   <data>/actions_log/<owner>/<repo>/<shard>/<task_id>.log.zst
+    #
+    # zstd-compressed, one JSON object per line with the text in "content".
+    # This is read-only and touches nothing Forgejo owns.
+    ACTIONS_LOG_DIRS = (
+        "/home/bullen/docker/forgejo/gitea/actions_log",
+        "/var/lib/forgejo/actions_log",
+        "/data/gitea/actions_log",
+    )
+
+    def _ci_logs_from_disk(self, run_id):
+        import glob  # only needed here
+
+        for base in self.ACTIONS_LOG_DIRS:
+            if not os.path.isdir(base):
+                continue
+            hits = glob.glob(f"{base}/{self.repo}/*/{run_id}.log.zst")
+            if not hits:
+                continue
+            try:
+                raw = subprocess.run(
+                    ["zstdcat", hits[0]], capture_output=True, check=True
+                ).stdout.decode(errors="replace")
+            except (OSError, subprocess.CalledProcessError):
+                return False
+            print(f"\n  (from disk: {hits[0]})")
+            print("─" * 60)
+            for line in raw.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    print(json.loads(line).get("content", "").rstrip())
+                except (ValueError, AttributeError):
+                    print(line)
+            return True
+        return False
 
 
 def main():
