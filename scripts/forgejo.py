@@ -4,6 +4,7 @@
 import argparse
 import io
 import json
+import os
 import re
 import subprocess
 import sys
@@ -11,6 +12,21 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
+
+# The standard priority label set — see scripts/issue-workflow.yaml for the
+# full convention this is one piece of. Colors/descriptions match the set
+# already in use on pant (the oldest repo carrying it), kept identical here
+# so a repo backfilled by ensure-labels looks the same as one set up by hand.
+STANDARD_LABELS = [
+    {"name": "p1-critical", "color": "e11d48",
+     "description": "Critical — blocks normal operation or risks data loss"},
+    {"name": "p2-high", "color": "e4606d",
+     "description": "High — significant issue, address soon"},
+    {"name": "p3-normal", "color": "0075ca",
+     "description": "Normal — standard backlog item"},
+    {"name": "p4-low", "color": "cfd3d7",
+     "description": "Low — nice to have, no urgency"},
+]
 
 
 def _git_credential_token(host):
@@ -25,9 +41,26 @@ def _git_credential_token(host):
     sys.exit(f"No credentials found for {host} in git credential store")
 
 
+def _resolve_token(host):
+    # Repo-local, per-identity token file — avoids the single global
+    # git-credential-store entry per host, which any process touching that
+    # host can silently overwrite for every other process using it.
+    identity = os.environ.get("FORGEJO_IDENTITY", "bullen")
+    token_file = os.path.join(_repo_root(), ".git", "forgejo", f"token-{identity}")
+    if os.path.isfile(token_file):
+        with open(token_file) as f:
+            token = f.read().strip()
+        if token:
+            return token
+    return _git_credential_token(host)
+
+
 def _git_remote_info():
+    # git config --get (not "remote get-url") to bypass any url.<x>.insteadOf
+    # rewriting — the API always needs the real HTTPS host, regardless of
+    # what transport git actually uses to fetch/push.
     proc = subprocess.run(
-        ["git", "remote", "get-url", "origin"],
+        ["git", "config", "--get", "remote.origin.url"],
         capture_output=True, text=True, cwd=_repo_root(),
     )
     url = proc.stdout.strip()
@@ -48,7 +81,7 @@ def _repo_root():
 class Forge:
     def __init__(self):
         self.host, self.repo = _git_remote_info()
-        self.token = _git_credential_token(self.host)
+        self.token = _resolve_token(self.host)
         self.base = f"https://{self.host}/api/v1/repos/{self.repo}"
         self._label_map = None  # name → id
 
@@ -72,9 +105,42 @@ class Forge:
             body = e.read().decode()
             sys.exit(f"HTTP {e.code} {method} {url}\n{body}")
 
+    # Forgejo silently caps per-page results at this many, whatever `limit` asks
+    # for. Measured against a repo with 84 open issues: limit=49 returns 49,
+    # limit=51 and limit=100 both return 50, and page=2 returns the remaining 34.
+    # So a response of exactly PAGE_MAX items means "there may be more", never
+    # "that is all" -- which is how an audit once reported "all 50 issues" for a
+    # repo that had 71. See konserver.lol#215.
+    PAGE_MAX = 50
+
+    def _paged(self, path, max_items=None):
+        """GET every page until a short one comes back.
+
+        Stops early once max_items is reached, so callers that only want a
+        screenful do not walk the whole list.
+        """
+        sep = "&" if "?" in path else "?"
+        out = []
+        page = 1
+        while True:
+            batch = self._req("GET", f"{path}{sep}limit={self.PAGE_MAX}&page={page}")
+            if not batch:
+                break
+            out.extend(batch)
+            # A short page is the only reliable end-of-list signal.
+            if len(batch) < self.PAGE_MAX:
+                break
+            if max_items is not None and len(out) >= max_items:
+                break
+            page += 1
+        return out[:max_items] if max_items is not None else out
+
     def _labels(self):
         if self._label_map is None:
-            data = self._req("GET", "/labels?limit=50")
+            # Paginated for the same reason as issues: a repo with more than
+            # PAGE_MAX labels would otherwise fail to find the ones past the cap,
+            # reporting "label not found" for a label that exists.
+            data = self._paged("/labels")
             self._label_map = {l["name"]: l["id"] for l in data}
         return self._label_map
 
@@ -98,10 +164,14 @@ class Forge:
     # --- issue list / show ---
 
     def issues_list(self, state="open", label=None, limit=30):
-        params = f"?type=issues&state={state}&limit={limit}"
+        params = f"?type=issues&state={state}"
         if label:
             params += f"&labels={urllib.parse.quote(label)}"
-        data = self._req("GET", f"/issues{params}")
+        # Ask for one more than needed: if it arrives, there is a next page and
+        # the footer below says so rather than letting the cut-off pass silently.
+        data = self._paged(f"/issues{params}", max_items=limit + 1)
+        more = len(data) > limit
+        data = data[:limit]
         if not data:
             print("No issues found.")
             return
@@ -113,6 +183,8 @@ class Forge:
             if tty and len(title) > 60:
                 title = title[:57] + "..."
             print(f"{idx:<6} {title:<62} {labels}")
+        if more:
+            print(f"\n(showing {limit}; more exist -- raise --limit to see them)")
 
     def issue_show(self, number, comments=False):
         data = self._req("GET", f"/issues/{number}")
@@ -151,6 +223,26 @@ class Forge:
         ids = [l["id"] for l in current] + [lid]
         self._replace_labels(issue, ids)
         print(f"#{issue} + '{name}'")
+
+    def ensure_labels(self):
+        """Idempotently create any missing labels from STANDARD_LABELS.
+        Never touches labels already present, standard or not — additive only."""
+        existing = self._labels()
+        created = []
+        for label in STANDARD_LABELS:
+            if label["name"] in existing:
+                continue
+            result = self._req("POST", "/labels", {
+                "name": label["name"],
+                "color": label["color"],
+                "description": label["description"],
+            })
+            self._label_map[label["name"]] = result["id"]
+            created.append(label["name"])
+        if created:
+            print(f"{self.repo}: created {', '.join(created)}")
+        else:
+            print(f"{self.repo}: already has the standard set")
 
     def label_remove(self, issue, name):
         lid = self._label_id(name)
@@ -325,9 +417,54 @@ class Forge:
                     print("─" * 60)
                     print(content)
         except urllib.error.HTTPError as e:
-            print(f"  (log API returned HTTP {e.code} — web URL: {r['url']})")
+            if not self._ci_logs_from_disk(run_id):
+                print(f"  (log API returned HTTP {e.code} — web URL: {r['url']})")
         except zipfile.BadZipFile:
-            print(f"  (unexpected response format — web URL: {r['url']})")
+            if not self._ci_logs_from_disk(run_id):
+                print(f"  (unexpected response format — web URL: {r['url']})")
+
+    # Forgejo 15.0.2 (gitea-1.22) serves no log endpoint under /api/v1 -- every
+    # variant of runs/<id>/logs, runs/<id>/jobs and jobs/<id>/logs returns 404,
+    # so the API path above can never work on this instance. When Forgejo runs
+    # on the same host, its on-disk log store is the fallback:
+    #
+    #   <data>/actions_log/<owner>/<repo>/<shard>/<task_id>.log.zst
+    #
+    # zstd-compressed, one JSON object per line with the text in "content".
+    # This is read-only and touches nothing Forgejo owns.
+    ACTIONS_LOG_DIRS = (
+        "/home/bullen/docker/forgejo/gitea/actions_log",
+        "/var/lib/forgejo/actions_log",
+        "/data/gitea/actions_log",
+    )
+
+    def _ci_logs_from_disk(self, run_id):
+        import glob  # only needed here
+
+        for base in self.ACTIONS_LOG_DIRS:
+            if not os.path.isdir(base):
+                continue
+            hits = glob.glob(f"{base}/{self.repo}/*/{run_id}.log.zst")
+            if not hits:
+                continue
+            try:
+                raw = subprocess.run(
+                    ["zstdcat", hits[0]], capture_output=True, check=True
+                ).stdout.decode(errors="replace")
+            except (OSError, subprocess.CalledProcessError):
+                return False
+            print(f"\n  (from disk: {hits[0]})")
+            print("─" * 60)
+            for line in raw.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    print(json.loads(line).get("content", "").rstrip())
+                except (ValueError, AttributeError):
+                    print(line)
+            return True
+        return False
 
 
 def main():
@@ -353,6 +490,8 @@ def main():
     c = sub.add_parser("label-add", help="Add a label by name")
     c.add_argument("issue", type=int)
     c.add_argument("label")
+
+    c = sub.add_parser("ensure-labels", help="Create the standard priority labels if missing (additive, idempotent)")
 
     c = sub.add_parser("label-remove", help="Remove a label by name")
     c.add_argument("issue", type=int)
@@ -399,6 +538,7 @@ def main():
         case "show":         f.issue_show(args.issue, args.comments)
         case "comment":      f.comment(args.issue, args.message)
         case "reopen":       f.reopen(args.issue)
+        case "ensure-labels": f.ensure_labels()
         case "label-add":    f.label_add(args.issue, args.label)
         case "label-remove": f.label_remove(args.issue, args.label)
         case "set-priority": f.set_priority(args.issue, args.priority, args.reason)
