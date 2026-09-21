@@ -8,11 +8,16 @@ _BASHRC_D="$HOME/.bashrc.d"
 _COMPILED="$_BASHRC_D/compiled"
 
 # ---- Check if compiled is stale ---------------------------
+# NOTE: module files under $_BASHRC_D are often symlinks (e.g. work.sh ->
+# ~/.config/work/work.sh). On this filesystem, `-nt` on the symlink path
+# reports the symlink's own mtime, not the target's, so edits to the real
+# file are invisible unless we resolve the link first with `readlink -f`.
 _bashrc_needs_compile() {
     [[ ! -f "$_COMPILED" ]] && return 0
-    local f
+    local f real_f
     for f in "$_BASHRC_D"/*.sh; do
-        [[ "$f" -nt "$_COMPILED" ]] && return 0
+        real_f=$(readlink -f "$f") || real_f="$f"
+        [[ "$real_f" -nt "$_COMPILED" ]] && return 0
     done
     return 1
 }

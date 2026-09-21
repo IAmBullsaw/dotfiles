@@ -13,6 +13,110 @@ bashrc-compile() {
     # Re-source .bashrc which will detect missing compiled and rebuild
     # shellcheck source=/dev/null
     source "$HOME/.bashrc"
+    _bashrc_notify_kitty
+}
+
+# --- Push current env to already-running kitty instances ---
+# New tabs in an already-running kitty process inherit ITS environment,
+# not a fresh shell's. `kitty @ env` updates what future tabs of a
+# running instance will see, without needing to restart kitty.
+# Source of vars: everything work.sh itself exports, discovered by running
+# it in a near-clean subshell and diffing env before/after (not grepping
+# the source, which misses dynamic exports like _load_netrc_token). This
+# deliberately excludes shell-session noise (PWD, SHLVL, PS1, etc.) since
+# those are never set by work.sh in the first place.
+# Removals: kitty @ env VARNAME (no "=") unsets a var for future windows
+# (verified live, not just from --help). We track PREVIOUSLY PUSHED VAR
+# NAMES ONLY (never values) in .kitty-env-vars, so deleting an export from
+# work.sh gets cleaned up in kitty too, instead of lingering until kitty
+# restarts. No secret values are ever written to disk.
+# See ~/.kiro/learnings.md "Tooling" for why this is needed.
+_bashrc_notify_kitty() {
+    if ! command -v kitty >/dev/null 2>&1; then
+        return 0
+    fi
+
+    local sockets=()
+    local sock
+    for sock in /tmp/kitty-*; do
+        [[ -S "$sock" ]] || continue
+        sockets+=("$sock")
+    done
+
+    if [[ ${#sockets[@]} -eq 0 ]]; then
+        echo "no kitty available"
+        return 0
+    fi
+
+    local work_sh="$HOME/.config/work/work.sh"
+    if [[ ! -f "$work_sh" ]]; then
+        return 0
+    fi
+
+    local before after
+    before=$(env -i HOME="$HOME" PATH="$PATH" USER="$USER" bash -c 'env' 2>/dev/null | sort)
+    after=$(env -i HOME="$HOME" PATH="$PATH" USER="$USER" bash -c "source '$work_sh' >/dev/null 2>&1; env" 2>/dev/null | sort)
+
+    local -a env_args=()
+    while IFS= read -r line; do
+        [[ -n "$line" ]] && env_args+=("$line")
+    done < <(comm -13 <(printf '%s\n' "$before") <(printf '%s\n' "$after"))
+
+    # Names-only, for the removal diff and the next snapshot. Never write
+    # env_args (which contains values) to disk.
+    local -a names_now=()
+    local pair
+    for pair in "${env_args[@]}"; do
+        names_now+=("${pair%%=*}")
+    done
+
+    local snapshot="$BASHRC_D/.kitty-env-vars"
+    local -a names_before=()
+    if [[ -f "$snapshot" ]]; then
+        while IFS= read -r line; do
+            [[ -n "$line" ]] && names_before+=("$line")
+        done < "$snapshot"
+    fi
+
+    local -a removed=()
+    while IFS= read -r line; do
+        [[ -n "$line" ]] && removed+=("$line")
+    done < <(comm -23 <(printf '%s\n' "${names_before[@]}" | sort) <(printf '%s\n' "${names_now[@]}" | sort))
+
+    printf '%s\n' "${names_now[@]}" > "$snapshot"
+
+    if [[ ${#env_args[@]} -eq 0 && ${#removed[@]} -eq 0 ]]; then
+        return 0
+    fi
+
+    local told=0
+    for sock in "${sockets[@]}"; do
+        local ok=1
+        if [[ ${#env_args[@]} -gt 0 ]]; then
+            kitty @ --to="unix:$sock" env "${env_args[@]}" >/dev/null 2>&1 || ok=0
+        fi
+        if [[ ${#removed[@]} -gt 0 ]]; then
+            kitty @ --to="unix:$sock" env "${removed[@]}" >/dev/null 2>&1 || ok=0
+        fi
+        [[ "$ok" -eq 1 ]] && told=$(( told + 1 ))
+    done
+
+    local suffix=""
+    if [[ ${#env_args[@]} -gt 0 && ${#removed[@]} -gt 0 ]]; then
+        suffix=" (${#env_args[@]} added, ${#removed[@]} removed)"
+    elif [[ ${#env_args[@]} -gt 0 ]]; then
+        suffix=" (${#env_args[@]} added)"
+    elif [[ ${#removed[@]} -gt 0 ]]; then
+        suffix=" (${#removed[@]} removed)"
+    fi
+
+    if [[ "$told" -eq 1 ]]; then
+        echo "told kitty${suffix}"
+    elif [[ "$told" -gt 1 ]]; then
+        echo "told $told kittens${suffix}"
+    else
+        echo "no kitty available"
+    fi
 }
 
 # --- Most-used commands ------------------------------------
