@@ -1,13 +1,6 @@
 ---
 name: resource-integrity-audit
-description: >
-  Audit all file:// and skill:// resource paths across every agent config to verify
-  they resolve to real files. Broken resource paths silently degrade agents - they
-  start without the context they expect, with no error. Use when: "$resource-audit",
-  "audit agent resources", "broken resource paths", "missing agent context files",
-  "resource integrity check", "do my agents load correctly", "check agent file paths".
-  Not for: auditing agent config quality (use agent-evaluate), auditing skill quality
-  (use skill-evaluate).
+description: "Audit all file:// and skill:// resource paths across every agent config to verify they resolve to real files. Broken resource paths silently degrade agents - they start without the context they expect, with no error. Use when: \"$resource-audit\", \"audit agent resources\", \"broken resource paths\", \"missing agent context files\", \"resource integrity check\", \"do my agents load correctly\", \"check agent file paths\". Not for: auditing agent config quality (use agent-evaluate), auditing skill quality (use skill-evaluate)."
 ---
 
 # Resource Integrity Audit

@@ -1,13 +1,6 @@
 ---
 name: hook-audit
-description: >
-  Audit ~/.kiro/hooks/ scripts for compliance with the instrumentation runtime's
-  safety requirements: exit-0 guarantee, ghost file risk, SIGINT safety, and
-  shell parsing brittleness. Use when: "$hook-audit", "audit hooks",
-  "check hook scripts", "are my hooks safe", "hook compliance check",
-  "will my hooks block the agent", "hook exit codes", "hook safety review".
-  Not for: evaluating agent configs (use agent-evaluate), auditing state files
-  (use state-audit).
+description: "Audit ~/.kiro/hooks/ scripts for compliance with the instrumentation runtime's safety requirements: exit-0 guarantee, ghost file risk, SIGINT safety, and shell parsing brittleness. Use when: \"$hook-audit\", \"audit hooks\", \"check hook scripts\", \"are my hooks safe\", \"hook compliance check\", \"will my hooks block the agent\", \"hook exit codes\", \"hook safety review\". Not for: evaluating agent configs (use agent-evaluate), auditing state files (use state-audit)."
 ---
 
 # Hook Audit

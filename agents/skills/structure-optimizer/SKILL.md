@@ -1,12 +1,6 @@
 ---
 name: structure-optimizer
-description: >
-  Deep-dive structural analysis of a skill's body text. Optimizes step sequencing,
-  context token footprint, deterministic failure boundaries, and verifiable done criteria.
-  Use when: "optimize skill structure", "fix my skill steps", "reduce token bloat",
-  "make this skill deterministic", "improve skill logic", "fix looping agent behavior",
-  "restructure skill body".
-  Not for: auditing frontmatter or writing trigger descriptions (use skill-evaluate).
+description: "Deep-dive structural analysis of a skill's body text. Optimizes step sequencing, context token footprint, deterministic failure boundaries, and verifiable done criteria. Use when: \"optimize skill structure\", \"fix my skill steps\", \"reduce token bloat\", \"make this skill deterministic\", \"improve skill logic\", \"fix looping agent behavior\", \"restructure skill body\". Not for: auditing frontmatter or writing trigger descriptions (use skill-evaluate)."
 ---
 
 # Skill Body Structure Optimizer

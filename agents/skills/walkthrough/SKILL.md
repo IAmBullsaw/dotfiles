@@ -1,20 +1,6 @@
 ---
 name: walkthrough
-description: >
-  Generates a self-contained HTML file with an interactive, clickable Mermaid diagram
-  (flowchart or ER diagram) that explains how a codebase feature, flow, architecture,
-  or database schema works. Designed for fast onboarding - each walkthrough is a visual
-  mental model readable in under 2 minutes.
-
-  TRIGGER this skill when ANY of these match:
-  - The prompt starts with or contains "$walkthrough" (explicit trigger - always activate, even if no topic follows)
-  - The user asks to "walk me through", "walkthrough", "trace the code path", "explain this flow",
-    "show how X works", "how does X work step by step", "explain the architecture",
-    "visualize the data model", "show the data structures", "show the relationships"
-  - The user wants a visual/interactive explanation of code, flows, pipelines, or schemas
-
-  When triggered, ALWAYS generate a walkthrough HTML file - never respond with just text.
-  If "$walkthrough" is used with no topic, generate an overview walkthrough of the entire project.
+description: "Generates a self-contained HTML file with an interactive, clickable Mermaid diagram (flowchart or ER diagram) that explains how a codebase feature, flow, architecture, or database schema works. Designed for fast onboarding - each walkthrough is a visual mental model readable in under 2 minutes. TRIGGER this skill when ANY of these match: - The prompt starts with or contains \"$walkthrough\" (explicit trigger - always activate, even if no topic follows) - The user asks to \"walk me through\", \"walkthrough\", \"trace the code path\", \"explain this flow\", \"show how X works\", \"how does X work step by step\", \"explain the architecture\", \"visualize the data model\", \"show the data structures\", \"show the relationships\" - The user wants a visual/interactive explanation of code, flows, pipelines, or schemas When triggered, ALWAYS generate a walkthrough HTML file - never respond with just text. If \"$walkthrough\" is used with no topic, generate an overview walkthrough of the entire project."
 ---
 
 # Codebase Walkthrough Generator

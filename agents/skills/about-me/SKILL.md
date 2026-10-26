@@ -1,8 +1,7 @@
 ---
 name: about-me
 type: reference
-description: >
-  Reference: who the user is and how they work: preferences (editor, terminal, theme, languages), how the AI files are organised and maintained, profile-building, dotfiles layout. Use when a task depends on the user's setup or preferences, or when updating these notes.
+description: "Reference: who the user is and how they work: preferences (editor, terminal, theme, languages), how the AI files are organised and maintained, profile-building, dotfiles layout. Use when a task depends on the user's setup or preferences, or when updating these notes."
 ---
 
 # about-me

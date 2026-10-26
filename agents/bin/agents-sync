@@ -13,7 +13,7 @@ Sources:
 check (read-only, exit 1 on any error):
   - skills/<name>/SKILL.md exists, starts with front matter
   - name matches the folder, lowercase-hyphenated
-  - description non-empty, at most 1024 characters
+  - description non-empty, at most 1024 characters, on one line (no > or | block)
   - top-level keys limited to name, description, metadata + ALLOWED_EXTRA
   - the same skill name in both sources: warning, the overlay wins
   - targets/kiro/agents/*.json parse as JSON
@@ -146,7 +146,11 @@ def check(leak_file=None):
             if not os.path.isfile(p):
                 errors.append(f"{where}: no SKILL.md")
                 continue
-            fm, err = parse_front_matter(open(p, encoding="utf-8", errors="replace").read())
+            raw = open(p, encoding="utf-8", errors="replace").read()
+            if re.search(r"^description:[ \t]*[>|]", raw.split("\n---", 1)[0], re.M):
+                errors.append(f"{where}/SKILL.md: folded/literal description (>, |): Kiro shows it as '>' "
+                              "and the triggers are lost. Use one double-quoted line")
+            fm, err = parse_front_matter(raw)
             if err:
                 errors.append(f"{where}/SKILL.md: {err}")
                 continue

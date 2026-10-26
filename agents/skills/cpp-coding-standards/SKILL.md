@@ -1,8 +1,7 @@
 ---
 name: cpp-coding-standards
 type: reference
-description: >
-  Reference: C++ coding standards based on the C++ Core Guidelines. Use when writing or reviewing C++ code, or choosing between language features (enum class, smart pointers, RAII).
+description: "Reference: C++ coding standards based on the C++ Core Guidelines. Use when writing or reviewing C++ code, or choosing between language features (enum class, smart pointers, RAII)."
 ---
 
 # C++ Coding Standards Reference

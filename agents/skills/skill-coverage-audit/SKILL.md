@@ -1,12 +1,6 @@
 ---
 name: skill-coverage-audit
-description: >
-  Audit ~/.kiro/skills/ for dead skills (not loaded by any agent), trigger phrase
-  overlap between skills, and skills missing required frontmatter. Use when:
-  "$skill-coverage", "audit skills", "dead skills", "unused skills", "skill overlap",
-  "which skills are loaded", "skill trigger conflicts", "skill coverage check".
-  Not for: evaluating a single skill's quality (use skill-evaluate), auditing
-  agent configs (use agent-stack-audit).
+description: "Audit ~/.kiro/skills/ for dead skills (not loaded by any agent), trigger phrase overlap between skills, and skills missing required frontmatter. Use when: \"$skill-coverage\", \"audit skills\", \"dead skills\", \"unused skills\", \"skill overlap\", \"which skills are loaded\", \"skill trigger conflicts\", \"skill coverage check\". Not for: evaluating a single skill's quality (use skill-evaluate), auditing agent configs (use agent-stack-audit)."
 ---
 
 # Skill Coverage Audit

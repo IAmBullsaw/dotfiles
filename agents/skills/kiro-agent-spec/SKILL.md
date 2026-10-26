@@ -1,8 +1,7 @@
 ---
 name: kiro-agent-spec
 type: reference
-description: >
-  Reference: Kiro CLI agent spec distilled from the official docs: built-in tool names and aliases, resources, hooks, steering. Use as ground truth when auditing agent configs, skills or hooks.
+description: "Reference: Kiro CLI agent spec distilled from the official docs: built-in tool names and aliases, resources, hooks, steering. Use as ground truth when auditing agent configs, skills or hooks."
 ---
 
 # Kiro CLI Agent Spec Reference

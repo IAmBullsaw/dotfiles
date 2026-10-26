@@ -1,13 +1,6 @@
 ---
 name: plugin-integrate
-description: >
-  Reverse-engineer a tool's plugin/extension API and build a working integration.
-  Use when: "$plugin", "write a plugin for", "create an extension for", "integrate with [tool]",
-  "kitten", "neovim plugin", "zellij plugin", "git hook", "bash completion",
-  "hook into", "extend [tool]", "custom command for", "add functionality to",
-  "add a keybind that runs", "automate inside [tool]".
-  Not for: configuring a tool (use dotfiles), writing standalone scripts (no plugin API involved),
-  using an already-understood API (just write the code).
+description: "Reverse-engineer a tool's plugin/extension API and build a working integration. Use when: \"$plugin\", \"write a plugin for\", \"create an extension for\", \"integrate with [tool]\", \"kitten\", \"neovim plugin\", \"zellij plugin\", \"git hook\", \"bash completion\", \"hook into\", \"extend [tool]\", \"custom command for\", \"add functionality to\", \"add a keybind that runs\", \"automate inside [tool]\". Not for: configuring a tool (use dotfiles), writing standalone scripts (no plugin API involved), using an already-understood API (just write the code)."
 ---
 
 # Plugin Integration

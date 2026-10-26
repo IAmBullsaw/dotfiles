@@ -1,8 +1,7 @@
 ---
 name: transparent-reasoning-framework
 type: reference
-description: >
-  Reference: templates for transparent, verifiable analysis: confidence declaration, evidence, analysis, conclusion, assumptions. Use when doing any non-trivial analysis or design that the user must be able to follow and challenge.
+description: "Reference: templates for transparent, verifiable analysis: confidence declaration, evidence, analysis, conclusion, assumptions. Use when doing any non-trivial analysis or design that the user must be able to follow and challenge."
 ---
 
 # Transparent Reasoning Framework

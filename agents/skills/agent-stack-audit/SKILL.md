@@ -1,13 +1,6 @@
 ---
 name: agent-stack-audit
-description: >
-  Holistic audit of the full ~/.kiro/agents/ stack as a system: lifecycle
-  separation, resource overlap, missing safety hooks, and write permission
-  coverage. Use when: "$stack-audit", "audit my agent stack", "check all agents",
-  "agent stack health", "are my agents well separated", "agent overlap check",
-  "missing hooks across agents", "agent stack review".
-  Not for: evaluating a single agent config (use agent-evaluate), auditing
-  hook scripts (use hook-audit).
+description: "Holistic audit of the full ~/.kiro/agents/ stack as a system: lifecycle separation, resource overlap, missing safety hooks, and write permission coverage. Use when: \"$stack-audit\", \"audit my agent stack\", \"check all agents\", \"agent stack health\", \"are my agents well separated\", \"agent overlap check\", \"missing hooks across agents\", \"agent stack review\". Not for: evaluating a single agent config (use agent-evaluate), auditing hook scripts (use hook-audit)."
 ---
 
 # Agent Stack Audit

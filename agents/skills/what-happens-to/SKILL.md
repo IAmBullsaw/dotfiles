@@ -1,19 +1,6 @@
 ---
 name: what-happens-to
-description: >
-  Traces the full lifecycle of a resource through the codebase when an abnormal
-  scenario occurs. Finds where cleanup breaks down.
-
-  TRIGGER when the user asks:
-  - "$whathappens" (explicit trigger)
-  - "what happens to [resource] when [scenario]?"
-  - "trace [resource] lifecycle on [error path]"
-  - "where does [resource] leak when [condition]?"
-
-  Examples:
-  - "what happens to the pool slot when admission fails?"
-  - "what happens to the session counter when a retry fails?"
-  - "what happens to the request when the backend goes unavailable?"
+description: "Traces the full lifecycle of a resource through the codebase when an abnormal scenario occurs. Finds where cleanup breaks down. TRIGGER when the user asks: - \"$whathappens\" (explicit trigger) - \"what happens to [resource] when [scenario]?\" - \"trace [resource] lifecycle on [error path]\" - \"where does [resource] leak when [condition]?\" Examples: - \"what happens to the pool slot when admission fails?\" - \"what happens to the session counter when a retry fails?\" - \"what happens to the request when the backend goes unavailable?\""
 ---
 
 # What Happens To: Resource Lifecycle Tracer

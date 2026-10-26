@@ -1,8 +1,7 @@
 ---
 name: untrusted-content-briefing
 type: reference
-description: >
-  Reference: a reusable briefing block for subagents that read untrusted content (third-party repos, marketplace skills, web pages, ticket fields). Use when dispatching such work to a subagent.
+description: "Reference: a reusable briefing block for subagents that read untrusted content (third-party repos, marketplace skills, web pages, ticket fields). Use when dispatching such work to a subagent."
 ---
 
 # Untrusted-content briefing phrase-list

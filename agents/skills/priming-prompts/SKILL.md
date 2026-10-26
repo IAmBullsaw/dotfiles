@@ -1,8 +1,7 @@
 ---
 name: priming-prompts
 type: reference
-description: >
-  Reference: reusable role and perspective prompts (code reviewer, systematic debugger, architect, technical writer, teacher, prompt evaluator). Use when starting a task that benefits from a specific perspective, or when asked to review a prompt.
+description: "Reference: reusable role and perspective prompts (code reviewer, systematic debugger, architect, technical writer, teacher, prompt evaluator). Use when starting a task that benefits from a specific perspective, or when asked to review a prompt."
 ---
 
 # Priming Prompts

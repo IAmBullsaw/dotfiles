@@ -97,8 +97,14 @@ class CheckTests(unittest.TestCase):
         rc, r = self.run_check()
         self.assertTrue(any("description missing" in e for e in r["errors"]), r)
 
-    def test_folded_description_is_read(self):
+    def test_folded_description_is_an_error(self):
         skill(self.personal, "tech-doc", front="name: tech-doc\ndescription: >\n  Write docs.\n  Use when: docs.\n")
+        rc, r = self.run_check()
+        self.assertEqual(rc, 1)
+        self.assertTrue(any("folded/literal description" in e for e in r["errors"]), r)
+
+    def test_quoted_inline_description_with_colon_passes(self):
+        skill(self.personal, "tech-doc", front='name: tech-doc\ndescription: "Write docs. Use when: docs."\n')
         rc, r = self.run_check()
         self.assertEqual(rc, 0, r)
 

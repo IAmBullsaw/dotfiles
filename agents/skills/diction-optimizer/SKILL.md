@@ -1,12 +1,6 @@
 ---
 name: diction-optimizer
-description: >
-  Deep-dive auditing of a skill's linguistic precision, terminology consistency,
-  and behavioral tone. Eliminates passive language, vague fluff, and menu loops.
-  Use when: "fix skill writing", "clean up prompt language", "improve prompt phrasing",
-  "fix passive instructions", "make prompt clear", "audit skill terminology",
-  "remove vague advice from skill".
-  Not for: restructuring directory layouts or editing frontmatter metadata (use structure-optimizer).
+description: "Deep-dive auditing of a skill's linguistic precision, terminology consistency, and behavioral tone. Eliminates passive language, vague fluff, and menu loops. Use when: \"fix skill writing\", \"clean up prompt language\", \"improve prompt phrasing\", \"fix passive instructions\", \"make prompt clear\", \"audit skill terminology\", \"remove vague advice from skill\". Not for: restructuring directory layouts or editing frontmatter metadata (use structure-optimizer)."
 ---
 
 # Skill Diction & Writing Quality Optimizer

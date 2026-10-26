@@ -1,12 +1,6 @@
 ---
 name: healthcheck
-description: >
-  Run a full system health check on the .kiro ecosystem. Validates skills, agents,
-  references, hooks, state files, and learnings in one pass.
-  Use when: "$healthcheck", "system health", "check everything", "run all audits",
-  "how healthy is my setup", "validate my system", "full audit".
-  Not for: improving a specific skill (use skill-evaluate), investigating one agent
-  (use agent-evaluate), checking event logs only (use event-log-audit).
+description: "Run a full system health check on the .kiro ecosystem. Validates skills, agents, references, hooks, state files, and learnings in one pass. Use when: \"$healthcheck\", \"system health\", \"check everything\", \"run all audits\", \"how healthy is my setup\", \"validate my system\", \"full audit\". Not for: improving a specific skill (use skill-evaluate), investigating one agent (use agent-evaluate), checking event logs only (use event-log-audit)."
 ---
 
 # Healthcheck

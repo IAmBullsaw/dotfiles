@@ -1,8 +1,7 @@
 ---
 name: agent-skills-spec
 type: reference
-description: >
-  Reference: the Agent Skills specification (agentskills.io): SKILL.md layout, front matter fields, scripts/references/assets folders. Use when writing, validating or reviewing a skill's structure.
+description: "Reference: the Agent Skills specification (agentskills.io): SKILL.md layout, front matter fields, scripts/references/assets folders. Use when writing, validating or reviewing a skill's structure."
 ---
 
 # Agent Skills Spec Reference

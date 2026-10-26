@@ -1,12 +1,6 @@
 ---
 name: state-audit
-description: >
-  Audit ~/.kiro/state/ for leaked timing files, orphaned session state, race
-  condition risks, and invalid JSON. Use when: "$state-audit", "audit state files",
-  "check for ghost files", "state file cleanup", "kiro state health",
-  "leaked timing files", "orphaned session state", "state directory audit".
-  Not for: auditing hook scripts (use hook-audit), auditing agent configs
-  (use agent-evaluate).
+description: "Audit ~/.kiro/state/ for leaked timing files, orphaned session state, race condition risks, and invalid JSON. Use when: \"$state-audit\", \"audit state files\", \"check for ghost files\", \"state file cleanup\", \"kiro state health\", \"leaked timing files\", \"orphaned session state\", \"state directory audit\". Not for: auditing hook scripts (use hook-audit), auditing agent configs (use agent-evaluate)."
 ---
 
 # State Audit
