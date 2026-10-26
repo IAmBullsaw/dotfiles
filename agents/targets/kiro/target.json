@@ -1,0 +1,29 @@
+{
+  "tool": "kiro",
+  "verified_version": "kiro-cli 2.25.0",
+  "capabilities": {
+    "instructions": {"mode": "reference", "via": "agent resources file://~/.agents/AGENTS.md, file://~/.agents.local/AGENTS.md; project AGENTS.md loads natively"},
+    "skills": {"mode": "reference", "via": "agent resources skill://~/.agents/skills/*/SKILL.md, skill://~/.agents.local/skills/*/SKILL.md, skill://.agents/skills/*/SKILL.md"},
+    "agents": {"mode": "link", "src": "targets/kiro/agents/*.json (both sources)", "dest": "~/.kiro/agents/"},
+    "hooks": {"mode": "link", "src": "targets/kiro/hooks/*.{py,sh} (both sources)", "dest": "~/.kiro/hooks/"},
+    "mcp": {"mode": "native"}
+  },
+  "evidence": [
+    {"date": "2026-10-26", "check": "symlinked skill folder in ~/.kiro/skills is listed and triggers", "result": "yes",
+     "how": "tech-doc pilot link; fresh --no-interactive ez session; prompt without the skill name picked tech-doc"},
+    {"date": "2026-10-26", "check": "folded description (description: >) in the skill index", "result": "shown as '>', triggers lost",
+     "how": "fixed by one double-quoted line"},
+    {"date": "2026-10-26", "check": "missing file:// and skill:// targets", "result": "not fatal, exit 0",
+     "how": "throwaway workspace agent with /nonexistent file:// and skill:// resources"},
+    {"date": "2026-10-26", "check": "relative skill://.agents/skills/*/SKILL.md", "result": "resolves against the working folder",
+     "how": "canary skill CANARY-REL-5521 in <workspace>/.agents/skills was listed"},
+    {"date": "2026-10-26", "check": "project-root AGENTS.md", "result": "loaded natively even when not listed; listing it too gives one copy",
+     "how": "codeword ZULU-4417 known with and without file://AGENTS.md; model counted one copy (soft evidence)"},
+    {"date": "2026-10-26", "check": "linked agent JSON modified by loading", "result": "no (sha256 unchanged); /agent edits not tested",
+     "how": "workspace agent file as a symlink, sha256 before and after a session"},
+    {"date": "2026-10-26", "check": "custom agents load the global ~/.kiro/skills", "result": "yes, contrary to the docs",
+     "how": "agent listing only ~/.agents* still listed a skill that exists only in ~/.kiro/skills; seen twice"},
+    {"date": "2026-10-26", "check": "same skill name from two skill:// globs, or a glob plus ~/.kiro/skills", "result": "NO shadowing: both entries are listed",
+     "how": "dupe-x in folders A and B, both orders: 2 entries; a skill present in both ~/.agents.local and ~/.kiro/skills: 2 entries"}
+  ]
+}

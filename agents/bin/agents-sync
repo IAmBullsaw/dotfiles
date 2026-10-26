@@ -202,6 +202,176 @@ def check(leak_file=None):
     return {"errors": errors, "warnings": warnings, "info": info}
 
 
+# ---------------------------------------------------------------- sync
+
+STATE_DIR_DEFAULT = "~/.local/state/agents-sync"
+LINK_KINDS = {"agents": ("*.json",), "hooks": ("*.py", "*.sh")}
+
+
+def state_dir():
+    xdg = os.environ.get("XDG_STATE_HOME")
+    return os.path.join(xdg, "agents-sync") if xdg else os.path.join(home(), ".local", "state", "agents-sync")
+
+
+def tilde(p):
+    h = home()
+    return "~" + p[len(h):] if p == h or p.startswith(h + os.sep) else p
+
+
+def untilde(p):
+    return os.path.join(home(), p[2:]) if p.startswith("~/") else p
+
+
+def load_manifest():
+    p = os.path.join(state_dir(), "manifest.json")
+    if os.path.exists(p):
+        with open(p, encoding="utf-8") as fh:
+            return json.load(fh)
+    return {"version": 1, "entries": []}
+
+
+def save_manifest(m):
+    d = state_dir()
+    os.makedirs(d, exist_ok=True)
+    tmp = os.path.join(d, ".manifest.json.tmp")
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(m, fh, indent=1)
+    os.replace(tmp, os.path.join(d, "manifest.json"))
+
+
+def desired_links(only=None):
+    """{dest_abs: (src_abs, source_label)} from targets/kiro in both sources; overlay wins."""
+    import fnmatch
+    want, warnings = {}, []
+    kiro = os.path.join(home(), ".kiro")
+    for label, root in sources():
+        for kind, globs in LINK_KINDS.items():
+            if only and kind != only:
+                continue
+            d = os.path.join(root, "targets", "kiro", kind)
+            if not os.path.isdir(d):
+                continue
+            for f in sorted(os.listdir(d)):
+                src = os.path.join(d, f)
+                if not os.path.isfile(src) or not any(fnmatch.fnmatch(f, g) for g in globs):
+                    continue
+                if "/" in f or f.startswith("."):
+                    continue
+                dest = os.path.join(kiro, kind, f)
+                if dest in want:
+                    warnings.append(f"{kind}/{f} in both personal and {label}: {label} wins")
+                want[dest] = (src, label)
+    return want, warnings
+
+
+def plan_sync(only=None, adopt=False):
+    m = load_manifest()
+    owned = {untilde(e["path"]): e for e in m["entries"]}
+    want, warnings = desired_links(only)
+    actions = []
+    for dest, (src, label) in sorted(want.items()):
+        if os.path.islink(dest):
+            cur = os.readlink(dest)
+            if dest in owned:
+                actions.append(("ok" if cur == src else "relink", dest, src, label))
+            else:
+                actions.append(("conflict:foreign-link", dest, src, label))
+        elif os.path.exists(dest):
+            actions.append(("adopt" if adopt else "conflict:real-file", dest, src, label))
+        else:
+            actions.append(("create", dest, src, label))
+    for dest, e in owned.items():
+        if e.get("kind") == "link" and dest not in want and (not only or f"/{only}/" in dest):
+            if not os.path.exists(untilde(e["source"])):
+                actions.append(("stale", dest, untilde(e["source"]), "-"))
+    return actions, warnings
+
+
+def backup(path, stamp):
+    rel = os.path.relpath(path, home())
+    dst = os.path.join(state_dir(), "backups", stamp, rel)
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    os.rename(path, dst)
+    return tilde(dst)
+
+
+def do_sync(only=None, adopt=False, dry=False):
+    import datetime
+    actions, warnings = plan_sync(only, adopt)
+    conflicts = [a for a in actions if a[0].startswith("conflict")]
+    out = {"actions": [{"action": a, "path": tilde(d), "source": tilde(s), "from": l} for a, d, s, l in actions],
+           "warnings": warnings}
+    if dry or conflicts:
+        out["status"] = "conflict" if conflicts else "planned"
+        return out
+    m = load_manifest()
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    changed = 0
+    for a, dest, src, label in actions:
+        if a in ("ok", "stale"):
+            continue
+        entry = {"path": tilde(dest), "kind": "link", "source": tilde(src), "target_tool": "kiro",
+                 "from": label, "created_at": stamp}
+        if a == "adopt":
+            entry["backup"] = backup(dest, stamp)
+        if a == "relink":
+            os.remove(dest)
+            m["entries"] = [e for e in m["entries"] if untilde(e["path"]) != dest]
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        os.symlink(src, dest)
+        m["entries"].append(entry)
+        save_manifest(m)                      # after every action: a killed run is resumable
+        changed += 1
+    out["status"] = "ok" if changed else "no changes"
+    out["changed"] = changed
+    return out
+
+
+def do_unlink(only=None, dry=False):
+    m = load_manifest()
+    remaining = list(m["entries"])
+    report = []
+    for e in list(m["entries"]):
+        p = untilde(e["path"])
+        if only and f"/{only}/" not in p:
+            continue
+        if not os.path.islink(p):
+            report.append({"path": e["path"], "result": "missing or replaced, left alone"})
+            continue
+        if os.readlink(p) != untilde(e["source"]):
+            report.append({"path": e["path"], "result": "points elsewhere now, left alone"})
+            continue
+        report.append({"path": e["path"], "result": "removed" + (", backup restored" if e.get("backup") else "")})
+        if dry:
+            continue
+        os.remove(p)
+        if e.get("backup"):
+            os.rename(untilde(e["backup"]), p)
+        remaining.remove(e)
+        save_manifest({"version": 1, "entries": remaining})   # after every action
+    return {"status": "planned" if dry else "ok", "items": report}
+
+
+def do_status():
+    m = load_manifest()
+    items = []
+    for e in m["entries"]:
+        p = untilde(e["path"])
+        if not os.path.islink(p):
+            st = "missing"
+        elif os.readlink(p) != untilde(e["source"]):
+            st = "drifted"
+        elif not os.path.exists(p):
+            st = "stale (source gone)"
+        else:
+            st = "ok"
+        items.append({"path": e["path"], "source": e["source"], "state": st})
+    actions, warnings = plan_sync()
+    pending = [{"action": a, "path": tilde(d)} for a, d, s, l in actions if a not in ("ok",)]
+    return {"managed": items, "pending": pending, "warnings": warnings,
+            "sources": [{"label": l, "root": tilde(r), "present": os.path.isdir(r)} for l, r in sources()]}
+
+
 def main():
     ap = argparse.ArgumentParser(prog="agents-sync", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -209,7 +379,37 @@ def main():
     c = sub.add_parser("check", help="validate both sources (read-only)")
     c.add_argument("--json", action="store_true")
     c.add_argument("--leak-patterns", help="work-pattern file (default: ~/.agents.local/agents-sync/leak-patterns.txt)")
+    st = sub.add_parser("status", help="managed links and pending changes (read-only)")
+    st.add_argument("--json", action="store_true")
+    sy = sub.add_parser("sync", help="link targets/kiro agents and hooks into ~/.kiro")
+    sy.add_argument("--dry-run", action="store_true")
+    sy.add_argument("--only", choices=list(LINK_KINDS))
+    sy.add_argument("--adopt", action="store_true", help="back up and replace real files in the way")
+    sy.add_argument("--json", action="store_true")
+    un = sub.add_parser("unlink", help="remove links agents-sync created, restore backups")
+    un.add_argument("--dry-run", action="store_true")
+    un.add_argument("--only", choices=list(LINK_KINDS))
+    un.add_argument("--json", action="store_true")
     a = ap.parse_args()
+
+    if a.cmd in ("status", "sync", "unlink"):
+        if a.cmd == "status":
+            r = do_status()
+        elif a.cmd == "sync":
+            r = do_sync(a.only, a.adopt, a.dry_run)
+        else:
+            r = do_unlink(a.only, a.dry_run)
+        if a.json:
+            print(json.dumps(r, indent=1))
+        else:
+            for w in r.get("warnings", []):
+                print(f"warning {w}")
+            for x in r.get("actions", []) + r.get("managed", []) + r.get("pending", []) + r.get("items", []):
+                print("  " + "  ".join(str(v) for v in x.values()))
+            print(f"{a.cmd}: {r.get('status', 'ok')}" + (f", {r['changed']} changed" if "changed" in r else ""))
+            if a.cmd == "sync" and r.get("status") in ("ok", "no changes") and not r.get("changed"):
+                print("no changes")
+        sys.exit(1 if r.get("status") == "conflict" else 0)
 
     if a.cmd == "check":
         r = check(a.leak_patterns and os.path.expanduser(a.leak_patterns))
