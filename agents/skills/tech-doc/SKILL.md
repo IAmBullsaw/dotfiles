@@ -1,17 +1,6 @@
 ---
 name: tech-doc
-description: >
-  Turn rough notes, meeting output, investigation findings, or chat dumps into clear,
-  structured technical documents. Applies technical writing principles automatically.
-  TRIGGER when ANY of these match:
-  - "$doc" (explicit trigger)
-  - "write this up", "clean this up", "make this a document"
-  - "turn these notes into", "structure this", "write a proposal"
-  - "document this", "write up the findings", "make this presentable"
-  - "polish this", "formalize this", "write a summary"
-  - User pastes raw meeting notes or findings and asks for a document
-  Not for: writing code (just write it), creating presentations (use Marp directly),
-  daily work log (say "log").
+description: "Turn rough notes, meeting output, investigation findings, or chat dumps into clear, structured technical documents. Applies technical writing principles automatically. TRIGGER when ANY of these match: - '$doc' (explicit trigger) - 'write this up', 'clean this up', 'make this a document' - 'turn these notes into', 'structure this', 'write a proposal' - 'document this', 'write up the findings', 'make this presentable' - 'polish this', 'formalize this', 'write a summary' - User pastes raw meeting notes or findings and asks for a document Not for: writing code (just write it), creating presentations (use Marp directly), daily work log (say 'log')."
 ---
 
 # Technical Document Writer
