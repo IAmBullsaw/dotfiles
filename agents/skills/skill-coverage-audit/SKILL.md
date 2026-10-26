@@ -1,11 +1,16 @@
 ---
 name: skill-coverage-audit
-description: "Audit ~/.kiro/skills/ for dead skills (not loaded by any agent), trigger phrase overlap between skills, and skills missing required frontmatter. Use when: \"$skill-coverage\", \"audit skills\", \"dead skills\", \"unused skills\", \"skill overlap\", \"which skills are loaded\", \"skill trigger conflicts\", \"skill coverage check\". Not for: evaluating a single skill's quality (use skill-evaluate), auditing agent configs (use agent-stack-audit)."
+description: "Audit the three skill roots (~/.agents/skills, ~/.agents.local/skills, ~/.kiro/skills) for dead skills (not loaded by any agent), trigger phrase overlap between skills, and skills missing required frontmatter. Use when: \"$skill-coverage\", \"audit skills\", \"dead skills\", \"unused skills\", \"skill overlap\", \"which skills are loaded\", \"skill trigger conflicts\", \"skill coverage check\". Not for: evaluating a single skill's quality (use skill-evaluate), auditing agent configs (use agent-stack-audit)."
 ---
 
 # Skill Coverage Audit
 
-Audit `~/.kiro/skills/` as a system. Individual skill quality is `skill-evaluate`'s job.
+Audit the skill set as a system. Individual skill quality is `skill-evaluate`'s job.
+
+Since the 2026-10-26 switch, skills live in three roots, and I always sweep all three:
+`~/.agents/skills` (personal, dotfiles), `~/.agents.local/skills` (work, dot-ai) and
+`~/.kiro/skills` (only the native skills that stay with a vendored agent bundle). Sweeping `~/.kiro/skills`
+alone sees 18 of 104 skills (count on 2026-10-26) and reports a clean result that is false.
 This skill finds systemic problems: skills that exist but are never loaded, trigger phrases
 that overlap between skills causing unpredictable activation, and skills with broken
 frontmatter that can't be parsed.
@@ -15,7 +20,7 @@ Reference: `~/.agents/skills/kiro-agent-spec/SKILL.md`
 ## What a healthy skill set looks like
 <context>
 
-1. Every skill in `~/.kiro/skills/` is loaded by at least one agent via `skill://` glob.
+1. Every skill in the three roots is loaded by at least one agent via a `skill://` glob or path.
 2. No two skills share trigger phrases that would cause the same user input to match both.
 3. Every SKILL.md has valid frontmatter with `name` and `description` fields.
 4. The `name` in frontmatter matches the folder name.
@@ -28,7 +33,7 @@ Reference: `~/.agents/skills/kiro-agent-spec/SKILL.md`
 ### 1. Inventory all skills
 
 ```bash
-ls ~/.kiro/skills/
+ls ~/.agents/skills ~/.agents.local/skills ~/.kiro/skills
 ```
 
 For each skill folder, I check that `SKILL.md` exists and has valid frontmatter.
@@ -60,8 +65,12 @@ for r in sorted(loaded):
 
 Then I check which skill folders are covered by those patterns.
 
-- ✅ `skill://~/.kiro/skills/**/SKILL.md` - covers all skills
-- ❌ `skill://~/.agents.local/skills/retrospective/SKILL.md` - only loads one skill, others are dead
+A skill is covered when `fnmatch` of its `SKILL.md` path against an agent's pattern
+(with `~` expanded) matches. Relative patterns like `skill://.agents/skills/*/SKILL.md`
+resolve against the working folder, so I resolve them from `~` and say so in the report.
+
+- ✅ `skill://~/.agents.local/skills/*/SKILL.md` in `⚡ ez` - covers every work skill
+- ❌ `skill://~/.kiro/skills/**/SKILL.md` as proof of full coverage - since the switch that root holds only the native bundle skills
 
 ### 3. Check for trigger overlap
 
@@ -69,37 +78,29 @@ I extract the `description` field from each skill's frontmatter and look for sha
 trigger phrases - especially the `Use when:` section.
 
 ```bash
-python3 -c "
+python3 - <<'EOF'
 import re
+from collections import defaultdict
 from pathlib import Path
 
-skills = {}
-for skill_md in Path.home().glob('.kiro/skills/*/SKILL.md'):
-    content = skill_md.read_text()
-    m = re.search(r'description:\s*>\s*(.*?)(?=\n\w|\Z)', content, re.DOTALL)
-    if m:
-        skills[skill_md.parent.name] = m.group(1).strip()
-
-# Look for shared trigger phrases (only clean phrases: 6-60 chars, no special chars)
-from collections import defaultdict
-phrase_map = defaultdict(list)
-for name, desc in skills.items():
-    triggers = re.findall(r'"([^"]+)"', desc)
-    for t in triggers:
+ROOTS = [Path.home() / r for r in ('.agents/skills', '.agents.local/skills', '.kiro/skills')]
+phrase_map = defaultdict(set)
+for skill_md in [p for r in ROOTS for p in r.glob('*/SKILL.md')]:
+    m = re.search(r'^description:\s*(.+)$', skill_md.read_text(), re.MULTILINE)
+    if not m:
+        continue
+    # Descriptions are one double-quoted YAML line; phrases inside
+    # are escaped quotes, so match \"...\" rather than bare quotes.
+    for t in re.findall(r'\\"([^"\\]+)\\"', m.group(1)):
         t = t.strip()
-        # Skip: too short, too long, contains newlines or emoji/special chars
-        if len(t) < 6 or len(t) > 60: continue
-        if any(c in t for c in ['\n', '❌', '✅', '->', '→', '`', '*']): continue
-        phrase_map[t.lower()].append(name)
+        if 6 <= len(t) <= 60 and not any(c in t for c in '`*'):
+            phrase_map[t.lower()].add(skill_md.parent.name)
 
-conflicts = {p: names for p, names in phrase_map.items() if len(names) > 1}
-if conflicts:
-    print('TRIGGER CONFLICTS:')
-    for phrase, names in sorted(conflicts.items()):
-        print(f'  \"{phrase}\" → {names}')
-else:
-    print('No trigger conflicts found')
-"
+conflicts = {p: sorted(n) for p, n in phrase_map.items() if len(n) > 1}
+print('TRIGGER CONFLICTS:' if conflicts else 'No trigger conflicts found')
+for phrase, names in sorted(conflicts.items()):
+    print(f'  "{phrase}" -> {names}')
+EOF
 ```
 
 ### 4. Check frontmatter validity
@@ -109,7 +110,8 @@ python3 -c "
 import re
 from pathlib import Path
 
-for skill_md in sorted(Path.home().glob('.kiro/skills/*/SKILL.md')):
+ROOTS = [Path.home() / r for r in ('.agents/skills', '.agents.local/skills', '.kiro/skills')]
+for skill_md in sorted(p for r in ROOTS for p in r.glob('*/SKILL.md')):
     content = skill_md.read_text()
     folder = skill_md.parent.name
     has_fm = content.startswith('---')
@@ -137,7 +139,7 @@ for skill_md in sorted(Path.home().glob('.kiro/skills/*/SKILL.md')):
 
 **Skill Coverage Audit Report**
 
-**Skills found:** {N} in ~/.kiro/skills/
+**Skills found:** {N} ({a} in ~/.agents/skills, {b} in ~/.agents.local/skills, {c} in ~/.kiro/skills)
 
 **Dead skills (not loaded by any agent):**
 {list or "none"}
@@ -166,7 +168,7 @@ for skill_md in sorted(Path.home().glob('.kiro/skills/*/SKILL.md')):
 ## Done
 <done>
 
-- [ ] All skill folders in `~/.kiro/skills/` inventoried
+- [ ] All skill folders in all three roots inventoried
 - [ ] Dead skills identified (not covered by any agent's skill:// resource)
 - [ ] Trigger overlap checked across all skill descriptions
 - [ ] Frontmatter validity checked for each skill

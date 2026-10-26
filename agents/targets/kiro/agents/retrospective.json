@@ -23,7 +23,8 @@
     "file://~/.agents.local/skills/learnings/SKILL.md",
     "file://~/.agents.local/skills/learnings-context/SKILL.md",
     "file://~/.agents.local/skills/playbook/SKILL.md",
-    "file://~/.kiro/profile.md",
+    "file://~/.agents/AGENTS.md",
+    "file://~/.agents.local/AGENTS.md",
     "file://~/.agents.local/skills/system-overview/SKILL.md",
     "file://~/.kiro/slip-ups.md"
   ],
