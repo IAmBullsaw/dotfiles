@@ -125,12 +125,12 @@ class CheckTests(unittest.TestCase):
         rc, r = self.run_check()
         self.assertEqual(rc, 0, r)
 
-    def test_duplicate_name_warns_overlay_wins(self):
+    def test_duplicate_name_across_sources_is_an_error(self):
         skill(self.personal, "tech-doc")
         skill(self.work, "tech-doc")
         rc, r = self.run_check()
-        self.assertEqual(rc, 0, r)
-        self.assertTrue(any("both personal and work: work wins" in w for w in r["warnings"]), r)
+        self.assertEqual(rc, 1)
+        self.assertTrue(any("in both personal and work" in e for e in r["errors"]), r)
 
     def test_no_front_matter(self):
         d = os.path.join(self.personal, "skills", "tech-doc")

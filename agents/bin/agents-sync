@@ -15,7 +15,7 @@ check (read-only, exit 1 on any error):
   - name matches the folder, lowercase-hyphenated
   - description non-empty, at most 1024 characters, on one line (no > or | block)
   - top-level keys limited to name, description, metadata + ALLOWED_EXTRA
-  - the same skill name in both sources: warning, the overlay wins
+  - the same skill name in both sources: error (Kiro lists both, no shadowing)
   - targets/kiro/agents/*.json parse as JSON
   - AGENTS.md: warning above 50 lines
   - leak check, ~/.agents only: secret patterns always; work patterns from
@@ -166,7 +166,8 @@ def check(leak_file=None):
                 errors.append(f"{where}/SKILL.md: keys not allowed at top level: {', '.join(sorted(extra))} "
                               "(move under metadata:, or add to ALLOWED_EXTRA)")
             if name in seen:
-                warnings.append(f"skill '{name}' in both {seen[name]} and {label}: {label} wins")
+                errors.append(f"skill '{name}' in both {seen[name]} and {label}: Kiro lists both copies, "
+                              "it does not shadow (verified 2026-10-26). Rename or remove one")
             seen.setdefault(name, label)
         ag = os.path.join(root, "targets", "kiro", "agents")
         if os.path.isdir(ag):
