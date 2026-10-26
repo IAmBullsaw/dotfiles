@@ -18,7 +18,6 @@ Work rules are in ~/.agents.local/AGENTS.md.
 
 - Ask before deleting any file. An approval for one item in a list is not approval for the list.
 - Commit only when asked. Never push without explicit confirmation.
-- When a rule is broken, log it in the slip-ups file at once: date, rule, what happened, correct action.
 
 ## Files, shell and git
 
