@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<agentConfigReference>
+  <overview>
+    <description>Complete reference for agent configuration file format</description>
+    <fields>
+      <field name="name" optional="true">The name of the agent (optional, derived from filename if not specified).</field>
+      <field name="description">A description of the agent.</field>
+      <field name="prompt">High-level context for the agent.</field>
+      <field name="mcpServers">The MCP servers the agent has access to.</field>
+      <field name="tools">The tools available to the agent.</field>
+      <field name="toolAliases">Tool name remapping for handling naming collisions.</field>
+      <field name="allowedTools">Tools that can be used without prompting.</field>
+      <field name="toolsSettings">Configuration for specific tools.</field>
+      <field name="resources">Resources available to the agent.</field>
+      <field name="hooks">Commands run at specific trigger points.</field>
+      <field name="includeMcpJson">Whether to include MCP servers from mcp.json files.</field>
+      <field name="model">The model ID to use for this agent.</field>
+      <field name="keyboardShortcut">Keyboard shortcut for quickly switching to this agent.</field>
+      <field name="welcomeMessage">Message displayed when switching to this agent.</field>
+    </fields>
+  </overview>
+
+  <fieldReference>
+
+    <fieldDef name="name">
+      <description>Specifies the name of the agent. Used for identification and display purposes.</description>
+      <example><![CDATA[{ "name": "aws-expert" }]]></example>
+    </fieldDef>
+
+    <fieldDef name="description">
+      <description>Provides a description of what the agent does. Primarily for human readability.</description>
+      <example><![CDATA[{ "description": "An agent specialized for AWS infrastructure tasks" }]]></example>
+    </fieldDef>
+
+    <fieldDef name="prompt">
+      <description>High-level context for the agent, similar to a system prompt. Supports inline text and file:// URIs.</description>
+      <variants>
+        <variant type="inline">
+          <example><![CDATA[{ "prompt": "You are an expert AWS infrastructure specialist" }]]></example>
+        </variant>
+        <variant type="fileUri">
+          <example><![CDATA[{ "prompt": "file://./my-agent-prompt.md" }]]></example>
+          <pathResolution>
+            <rule type="relative">Resolved relative to the agent configuration file's directory.
+              file://./prompt.md → prompt.md in the same directory as the agent config
+              file://../shared/prompt.md → prompt.md in a parent directory
+            </rule>
+            <rule type="absolute">Used as-is. Example: file:///home/user/prompts/agent.md</rule>
+          </pathResolution>
+        </variant>
+      </variants>
+    </fieldDef>
+
+    <fieldDef name="mcpServers">
+      <description>Specifies which MCP servers the agent has access to. Each server is defined with a command and optional arguments.</description>
+      <serverFields>
+        <serverField name="command" required="true">The command to execute to start the MCP server.</serverField>
+        <serverField name="args" required="false">Arguments to pass to the command.</serverField>
+        <serverField name="env" required="false">Environment variables to set for the server.</serverField>
+        <serverField name="timeout" required="false">Timeout for each MCP request in milliseconds. Default: 120000.</serverField>
+        <serverField name="oauth" required="false">
+          OAuth configuration for HTTP-based MCP servers.
+          <oauthFields>
+            <oauthField name="clientId" required="false">Pre-registered OAuth client ID. Fallback when Dynamic Client Registration (DCR) fails. Required for services like Slack, GitHub, Figma that don't support DCR.</oauthField>
+            <oauthField name="redirectUri" required="false">Custom redirect URI for OAuth flow. Example: "127.0.0.1:7778"</oauthField>
+            <oauthField name="oauthScopes" required="false">Array of OAuth scopes to request. Example: ["read", "write"]. Use empty array [] to bypass scope requirements.</oauthField>
+          </oauthFields>
+        </serverField>
+      </serverFields>
+      <example><![CDATA[
+{
+  "mcpServers": {
+    "fetch": { "command": "fetch3.1", "args": [] },
+    "git": {
+      "command": "git-mcp",
+      "args": [],
+      "env": { "GIT_CONFIG_GLOBAL": "/dev/null" },
+      "timeout": 120000
+    }
+  }
+}
+      ]]></example>
+      <oauthExamples>
+        <oauthExample label="HTTP server with scopes"><![CDATA[
+{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.github.com/mcp",
+      "oauth": { "redirectUri": "127.0.0.1:8080", "oauthScopes": ["repo", "user"] }
+    }
+  }
+}
+        ]]></oauthExample>
+        <oauthExample label="Bypass scope requirements"><![CDATA[
+{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.github.com/mcp",
+      "oauth": { "redirectUri": "127.0.0.1:8080", "oauthScopes": [] }
+    }
+  }
+}
+        ]]></oauthExample>
+        <oauthExample label="Pre-registered OAuth app (e.g. Slack)"><![CDATA[
+{
+  "mcpServers": {
+    "slack": {
+      "type": "http",
+      "url": "https://mcp.slack.com/mcp",
+      "oauth": {
+        "clientId": "your-slack-app-client-id",
+        "oauthScopes": ["search:read", "channels:read"]
+      }
+    }
+  }
+}
+        ]]></oauthExample>
+      </oauthExamples>
+    </fieldDef>
+
+    <fieldDef name="tools">
+      <description>Lists all tools the agent can potentially use. Includes built-in tools and MCP server tools.</description>
+      <syntax>
+        <rule>Built-in tools: specified by name, e.g. "read", "shell"</rule>
+        <rule>All tools from MCP server: "@server_name"</rule>
+        <rule>Specific MCP tool: "@server_name/tool_name"</rule>
+        <rule>All available tools (wildcard): "*"</rule>
+        <rule>All built-in tools: "@builtin"</rule>
+      </syntax>
+      <example><![CDATA[
+{
+  "tools": ["read", "write", "shell", "@git", "@rust-analyzer/check_code"]
+}
+      ]]></example>
+    </fieldDef>
+
+    <fieldDef name="toolAliases">
+      <description>Advanced feature to remap tool names. Used to resolve naming collisions between MCP servers or create intuitive names. Key = original tool name (with server prefix for MCP tools), value = new name.</description>
+      <example><![CDATA[
+{
+  "toolAliases": {
+    "@github-mcp/get_issues": "github_issues",
+    "@gitlab-mcp/get_issues": "gitlab_issues",
+    "@aws-cloud-formation/deploy_stack_with_parameters": "deploy_cf",
+    "@kubernetes-tools/get_pod_logs_with_namespace": "pod_logs"
+  }
+}
+      ]]></example>
+    </fieldDef>
+
+    <fieldDef name="allowedTools">
+      <description>Tools that can be used without prompting the user for permission. Does NOT support bare "*" wildcard. Supports glob-style patterns.</description>
+      <patternTypes>
+        <patternType label="Exact — built-in">"read", "shell", "knowledge"</patternType>
+        <patternType label="Exact — specific MCP tool">"@server_name/tool_name"</patternType>
+        <patternType label="Exact — all tools from server">"@server_name"</patternType>
+        <patternType label="Wildcard — tool prefix">"@server/read_*" matches read_file, read_config</patternType>
+        <patternType label="Wildcard — tool suffix">"@server/*_get" matches issue_get, data_get</patternType>
+        <patternType label="Wildcard — server pattern">"@*-mcp/read_*" matches @git-mcp/read_file, @db-mcp/read_data</patternType>
+        <patternType label="Wildcard — any tool from pattern servers">"@git-*/*" matches any tool from git-* servers</patternType>
+        <patternType label="Wildcard — native tool prefix">"r*" matches read; "w*" matches write</patternType>
+        <patternType label="All built-in tools">"@builtin"</patternType>
+      </patternTypes>
+      <patternRules>
+        <rule>* matches any sequence of characters (including none)</rule>
+        <rule>? matches exactly one character</rule>
+        <rule>Exact matches take precedence over patterns</rule>
+        <rule>Server-level permissions (@server_name) allow all tools from that server</rule>
+        <rule>Case-sensitive matching</rule>
+        <rule>"*" wildcard NOT supported (unlike the tools field)</rule>
+      </patternRules>
+      <securityNote>When write tools (write, shell, or MCP tools with write access) are allowed, the agent can modify any file the tools have access to, including all resources under ~/.kiro.</securityNote>
+    </fieldDef>
+
+    <fieldDef name="toolsSettings">
+      <description>Configuration for specific tools. Specifications that configure allowable patterns are overridden if the tool is also in allowedTools.</description>
+      <example><![CDATA[
+{
+  "toolsSettings": {
+    "write": { "allowedPaths": ["~/**"] },
+    "shell": {
+      "allowedCommands": ["git status", "git fetch"],
+      "deniedCommands": ["git commit .*", "git push .*"],
+      "autoAllowReadonly": true
+    },
+    "@git/git_status": { "git_user": "$GIT_USER" }
+  }
+}
+      ]]></example>
+    </fieldDef>
+
+    <fieldDef name="resources">
+      <description>Gives the agent access to local resources: files, skills, or knowledge bases.</description>
+      <resourceTypes>
+        <resourceType scheme="file://">Loaded directly into context at startup. Use for content the agent always needs.</resourceType>
+        <resourceType scheme="skill://">Metadata (name + description) loaded at startup; full content loaded on demand. Skill files must begin with YAML frontmatter containing name and description.</resourceType>
+        <resourceType type="knowledgeBase">Indexed documentation for semantic search. Supports millions of tokens with incremental loading.</resourceType>
+      </resourceTypes>
+      <pathSupport>Specific paths, glob patterns, absolute or relative paths.</pathSupport>
+      <knowledgeBaseFields>
+        <kbField name="type" required="true">Must be "knowledgeBase"</kbField>
+        <kbField name="source" required="true">Path to index. Use file:// prefix for local paths.</kbField>
+        <kbField name="name" required="true">Display name for the knowledge base.</kbField>
+        <kbField name="description" required="false">Brief description of the content.</kbField>
+        <kbField name="indexType" required="false">Indexing strategy: "best" (default, higher quality) or "fast" (quicker indexing).</kbField>
+        <kbField name="autoUpdate" required="false">Re-index when agent spawns. Default: false.</kbField>
+      </knowledgeBaseFields>
+      <example><![CDATA[
+{
+  "resources": [
+    "file://README.md",
+    "file://.kiro/steering/**/*.md",
+    "skill://.kiro/skills/**/SKILL.md",
+    {
+      "type": "knowledgeBase",
+      "source": "file://./docs",
+      "name": "ProjectDocs",
+      "description": "Project documentation and guides",
+      "indexType": "best",
+      "autoUpdate": true
+    }
+  ]
+}
+      ]]></example>
+    </fieldDef>
+
+    <fieldDef name="hooks">
+      <description>Commands run at specific trigger points during agent lifecycle and tool execution.</description>
+      <hookTypes>
+        <hookType name="agentSpawn">Triggered when the agent is initialized.</hookType>
+        <hookType name="userPromptSubmit">Triggered when the user submits a message.</hookType>
+        <hookType name="preToolUse">Triggered before a tool is executed. Can block the tool use.</hookType>
+        <hookType name="postToolUse">Triggered after a tool is executed.</hookType>
+        <hookType name="stop">Triggered when the assistant finishes responding.</hookType>
+      </hookTypes>
+      <hookFields>
+        <hookField name="command" required="true">The command to execute.</hookField>
+        <hookField name="matcher" required="false">Pattern to match tool names for preToolUse and postToolUse. Uses internal tool names (fs_read, fs_write, execute_bash, use_aws) not simplified names.</hookField>
+      </hookFields>
+      <example><![CDATA[
+{
+  "hooks": {
+    "agentSpawn": [{ "command": "git status" }],
+    "userPromptSubmit": [{ "command": "ls -la" }],
+    "preToolUse": [
+      { "matcher": "execute_bash", "command": "{ echo \"$(date) - Bash command:\"; cat; echo; } >> /tmp/bash_audit_log" },
+      { "matcher": "use_aws", "command": "{ echo \"$(date) - AWS CLI call:\"; cat; echo; } >> /tmp/aws_audit_log" }
+    ],
+    "postToolUse": [
+      { "matcher": "fs_write", "command": "cargo fmt --all" }
+    ],
+    "stop": [{ "command": "npm test" }]
+  }
+}
+      ]]></example>
+    </fieldDef>
+
+    <fieldDef name="includeMcpJson">
+      <description>Whether to include MCP servers defined in mcp.json files (~/.kiro/settings/mcp.json for global, &lt;cwd&gt;/.kiro/settings/mcp.json for workspace). When true, agent has access to all MCP servers from those files in addition to those in mcpServers.</description>
+      <note>The only valid field name is includeMcpJson. The field useLegacyMcpJson is NOT valid and is silently ignored.</note>
+      <example><![CDATA[{ "includeMcpJson": true }]]></example>
+    </fieldDef>
+
+    <fieldDef name="model">
+      <description>The model ID to use for this agent. Must match an available model from the Kiro CLI model service. Check available models with /model command. Falls back to default model with a warning if unavailable.</description>
+      <example><![CDATA[{ "model": "claude-sonnet-4" }]]></example>
+    </fieldDef>
+
+    <fieldDef name="keyboardShortcut">
+      <description>Keyboard shortcut for quickly switching to this agent during a chat session.</description>
+      <format>[modifier+]key</format>
+      <modifiers>ctrl, shift</modifiers>
+      <keys>a-z (case insensitive), 0-9</keys>
+      <behavior>
+        <rule>Pressing the shortcut switches to this agent.</rule>
+        <rule>Pressing again while on this agent switches back to the previous agent.</rule>
+        <rule>Conflicting shortcuts are disabled with a warning. Use /agent swap to switch manually.</rule>
+      </behavior>
+      <example><![CDATA[{ "keyboardShortcut": "ctrl+a" }]]></example>
+    </fieldDef>
+
+    <fieldDef name="welcomeMessage">
+      <description>Message displayed when switching to this agent. Appears after the agent switch confirmation.</description>
+      <example><![CDATA[{ "welcomeMessage": "What would you like to build today?" }]]></example>
+    </fieldDef>
+
+  </fieldReference>
+
+  <fileLocations>
+    <location type="local" path=".kiro/agents/">Project-specific agents. Only available when running Kiro CLI from that directory or subdirectories. Share with team via version control.</location>
+    <location type="global" path="~/.kiro/agents/">User-wide agents. Available from any directory.</location>
+    <precedence>Local agents take precedence over global agents with the same name (warning is logged).</precedence>
+  </fileLocations>
+
+  <bestPractices>
+    <practice>Start restrictive: begin with minimal tool access and expand as needed.</practice>
+    <practice>Name clearly: use descriptive names that indicate the agent's purpose.</practice>
+    <practice>Document usage: add clear descriptions to help team members understand the agent.</practice>
+    <practice>Version control: store agent configurations in your project repository.</practice>
+    <practice>Test thoroughly: verify tool permissions work as expected before sharing.</practice>
+    <practice>Use local agents for project-specific configs, global agents for general-purpose use.</practice>
+    <practice>Review allowedTools carefully. Use specific patterns over wildcards.</practice>
+    <practice>Configure toolsSettings.write.allowedPaths to restrict write operations to specific paths.</practice>
+    <practice>Use preToolUse hooks to audit or block sensitive operations.</practice>
+  </bestPractices>
+
+  <completeExample><![CDATA[
+{
+  "name": "aws-rust-agent",
+  "description": "Specialized agent for AWS and Rust development",
+  "prompt": "file://./prompts/aws-rust-expert.md",
+  "mcpServers": {
+    "fetch": { "command": "fetch-server", "args": [] },
+    "git": { "command": "git-mcp", "args": [] }
+  },
+  "tools": ["read", "write", "shell", "aws", "@git", "@fetch/fetch_url"],
+  "toolAliases": {
+    "@git/git_status": "status",
+    "@fetch/fetch_url": "get"
+  },
+  "allowedTools": ["read", "@git/git_status"],
+  "toolsSettings": {
+    "write": { "allowedPaths": ["src/**", "tests/**", "Cargo.toml"] },
+    "aws": { "allowedServices": ["s3", "lambda"], "autoAllowReadonly": true }
+  },
+  "resources": [
+    "file://README.md",
+    "file://docs/**/*.md"
+  ],
+  "hooks": {
+    "agentSpawn": [{ "command": "git status" }],
+    "postToolUse": [{ "matcher": "fs_write", "command": "cargo fmt --all" }]
+  },
+  "includeMcpJson": false,
+  "model": "claude-sonnet-4",
+  "keyboardShortcut": "ctrl+shift+r",
+  "welcomeMessage": "Ready to help with AWS and Rust development!"
+}
+  ]]></completeExample>
+
+</agentConfigReference>

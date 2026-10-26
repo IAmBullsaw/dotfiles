@@ -1,0 +1,224 @@
+#!/usr/bin/env python3
+"""
+agents-sync - manage the ~/.agents canonical folder (AGENTS-HOME-SPEC.md, section 9).
+
+v1 so far: `check` only. `status`, `sync` and `unlink` come with Phase 3.
+
+  agents-sync check [--json] [--leak-patterns FILE]
+
+Sources:
+  ~/.agents         personal, required (dotfiles/agents)
+  ~/.agents.local   work overlay, optional
+
+check (read-only, exit 1 on any error):
+  - skills/<name>/SKILL.md exists, starts with front matter
+  - name matches the folder, lowercase-hyphenated
+  - description non-empty, at most 1024 characters
+  - top-level keys limited to name, description, metadata + ALLOWED_EXTRA
+  - the same skill name in both sources: warning, the overlay wins
+  - targets/kiro/agents/*.json parse as JSON
+  - AGENTS.md: warning above 50 lines
+  - leak check, ~/.agents only: secret patterns always; work patterns from
+    --leak-patterns or ~/.agents.local/agents-sync/leak-patterns.txt.
+    Reports file:line and the pattern name, never the matched text.
+"""
+import argparse
+import json
+import os
+import re
+import sys
+
+ALLOWED_EXTRA = {"type", "use_when", "version",       # round 3, R2
+                 "model", "model_notes"}             # documented valid in build-skills
+AGENTS_MD_WARN = 50
+NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+SKIP_DIRS = {".git", "__pycache__", "node_modules"}
+TEXT_MAX = 2_000_000
+SECRET_PATTERNS = [
+    ("gitlab token", re.compile(r"glpat-[A-Za-z0-9_-]{20,}")),
+    ("github token", re.compile(r"gh[pousr]_[A-Za-z0-9]{30,}")),
+    ("private key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
+    ("bearer/basic auth", re.compile(r"(?i)authorization:\s*(basic|bearer)\s+[A-Za-z0-9+/=._-]{20,}")),
+    ("private-token header", re.compile(r"(?i)private-token:\s*[A-Za-z0-9_-]{20,}")),
+    ("aws access key", re.compile(r"AKIA[0-9A-Z]{16}")),
+    ("assigned secret", re.compile(r"(?i)(token|password|passwd|secret|api_key)['\"]?\s*[:=]\s*['\"][A-Za-z0-9+/=_-]{20,}['\"]")),
+]
+
+
+def home():
+    return os.environ.get("HOME") or os.path.expanduser("~")
+
+
+def sources():
+    h = home()
+    return [("personal", os.path.join(h, ".agents")), ("work", os.path.join(h, ".agents.local"))]
+
+
+def parse_front_matter(text):
+    """Small subset parser: top-level `key: value`, quoted strings, folded `>`/`|`
+    blocks and an indented `metadata:` map. Returns (dict, error)."""
+    if not text.startswith("---\n"):
+        return None, "no front matter (file must start with ---)"
+    end = text.find("\n---", 4)
+    if end == -1:
+        return None, "front matter not closed with ---"
+    fm, cur, block = {}, None, []
+    for line in text[4:end].split("\n"):
+        if not line.strip() or line.lstrip().startswith("#"):
+            if cur and block is not None:
+                block.append("")
+            continue
+        if line[0] in " \t":
+            if cur is None:
+                return None, f"indented line before any key: {line.strip()[:40]}"
+            block.append(line.strip())
+            continue
+        if cur is not None:
+            fm[cur] = _finish(fm[cur], block)
+        m = re.match(r"^([A-Za-z_][\w-]*):\s*(.*)$", line)
+        if not m:
+            return None, f"cannot parse line: {line[:40]}"
+        cur, val, block = m.group(1), m.group(2).strip(), []
+        fm[cur] = val
+    if cur is not None:
+        fm[cur] = _finish(fm[cur], block)
+    return fm, None
+
+
+def _finish(val, block):
+    if val in (">", "|", ">-", "|-", ""):
+        sep = "\n" if val.startswith("|") else " "
+        return sep.join(b for b in block).strip() if val else ({"_block": block} if block else "")
+    if len(val) >= 2 and val[0] == val[-1] and val[0] in "\"'":
+        return val[1:-1]
+    return val
+
+
+def iter_text_files(root):
+    for dp, dn, fn in os.walk(root):
+        dn[:] = [d for d in dn if d not in SKIP_DIRS]
+        for f in fn:
+            p = os.path.join(dp, f)
+            if os.path.islink(p) or not os.path.isfile(p) or os.path.getsize(p) > TEXT_MAX:
+                continue
+            try:
+                with open(p, encoding="utf-8") as fh:
+                    yield p, fh.read()
+            except (UnicodeDecodeError, OSError):
+                continue
+
+
+def load_leak_patterns(path):
+    pats = []
+    with open(path, encoding="utf-8") as fh:
+        for n, line in enumerate(fh, 1):
+            s = line.strip()
+            if not s or s.startswith("#"):
+                continue
+            try:
+                pats.append((f"work pattern #{n}", re.compile(s, re.I)))
+            except re.error as e:
+                raise SystemExit(f"bad regex in {path}:{n}: {e}")
+    return pats
+
+
+def check(leak_file=None):
+    errors, warnings, info = [], [], []
+    seen = {}
+    srcs = sources()
+    if not os.path.isdir(srcs[0][1]):
+        errors.append(f"{srcs[0][1]} does not exist")
+    for label, root in srcs:
+        if not os.path.isdir(root):
+            info.append(f"{label}: {root} not present")
+            continue
+        sk = os.path.join(root, "skills")
+        names = sorted(os.listdir(sk)) if os.path.isdir(sk) else []
+        info.append(f"{label}: {len([n for n in names if os.path.isdir(os.path.join(sk, n))])} skills in {root}")
+        for name in names:
+            d = os.path.join(sk, name)
+            if not os.path.isdir(d):
+                continue
+            where = f"{label}:skills/{name}"
+            if not NAME_RE.match(name):
+                errors.append(f"{where}: folder name must be lowercase-hyphenated")
+            p = os.path.join(d, "SKILL.md")
+            if not os.path.isfile(p):
+                errors.append(f"{where}: no SKILL.md")
+                continue
+            fm, err = parse_front_matter(open(p, encoding="utf-8", errors="replace").read())
+            if err:
+                errors.append(f"{where}/SKILL.md: {err}")
+                continue
+            if fm.get("name") != name:
+                errors.append(f"{where}/SKILL.md: name '{fm.get('name')}' does not match folder")
+            desc = fm.get("description")
+            if not isinstance(desc, str) or not desc.strip():
+                errors.append(f"{where}/SKILL.md: description missing or empty")
+            elif len(desc) > 1024:
+                errors.append(f"{where}/SKILL.md: description is {len(desc)} chars (max 1024)")
+            extra = set(fm) - {"name", "description", "metadata"} - ALLOWED_EXTRA
+            if extra:
+                errors.append(f"{where}/SKILL.md: keys not allowed at top level: {', '.join(sorted(extra))} "
+                              "(move under metadata:, or add to ALLOWED_EXTRA)")
+            if name in seen:
+                warnings.append(f"skill '{name}' in both {seen[name]} and {label}: {label} wins")
+            seen.setdefault(name, label)
+        ag = os.path.join(root, "targets", "kiro", "agents")
+        if os.path.isdir(ag):
+            for f in sorted(os.listdir(ag)):
+                if f.endswith(".json"):
+                    try:
+                        json.load(open(os.path.join(ag, f), encoding="utf-8"))
+                    except ValueError as e:
+                        errors.append(f"{label}:targets/kiro/agents/{f}: invalid JSON ({e})")
+        am = os.path.join(root, "AGENTS.md")
+        if os.path.isfile(am):
+            n = sum(1 for _ in open(am, encoding="utf-8", errors="replace"))
+            if n > AGENTS_MD_WARN:
+                warnings.append(f"{label}:AGENTS.md is {n} lines (target {AGENTS_MD_WARN})")
+
+    # leak check: personal source only
+    personal = srcs[0][1]
+    leak_file = leak_file or os.path.join(srcs[1][1], "agents-sync", "leak-patterns.txt")
+    pats = list(SECRET_PATTERNS)
+    if os.path.isfile(leak_file):
+        pats += load_leak_patterns(leak_file)
+        info.append(f"leak check: {len(pats)} patterns ({len(SECRET_PATTERNS)} secret + work patterns from {leak_file})")
+    else:
+        warnings.append(f"leak check limited to secret patterns: {leak_file} not found")
+    if os.path.isdir(personal):
+        for p, text in iter_text_files(personal):
+            rel = os.path.relpath(p, personal)
+            for n, line in enumerate(text.splitlines(), 1):
+                for pname, rx in pats:
+                    if rx.search(line):
+                        errors.append(f"leak: personal:{rel}:{n}: matches {pname}")
+                        break
+    return {"errors": errors, "warnings": warnings, "info": info}
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="agents-sync", description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    c = sub.add_parser("check", help="validate both sources (read-only)")
+    c.add_argument("--json", action="store_true")
+    c.add_argument("--leak-patterns", help="work-pattern file (default: ~/.agents.local/agents-sync/leak-patterns.txt)")
+    a = ap.parse_args()
+
+    if a.cmd == "check":
+        r = check(a.leak_patterns and os.path.expanduser(a.leak_patterns))
+        r["status"] = "error" if r["errors"] else "ok"
+        if a.json:
+            print(json.dumps(r, indent=1))
+        else:
+            for k in ("info", "warnings", "errors"):
+                for m in r[k]:
+                    print(f"{k[:-1] if k != 'info' else 'info':7} {m}")
+            print(f"\ncheck: {len(r['errors'])} errors, {len(r['warnings'])} warnings")
+        sys.exit(1 if r["errors"] else 0)
+
+
+if __name__ == "__main__":
+    main()
