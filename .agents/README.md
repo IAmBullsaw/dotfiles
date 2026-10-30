@@ -124,4 +124,4 @@ ansible-playbook setup.yml --tags agents -e agents_work_dir=~/dot-ai/.agents  # 
 - Edit anything under `~/.agents` that isn't a skill (skills edit the source through their link).
 - Put secrets or work content in this repo. Work content goes in the work repo.
 
-Design history and the original migration spec: `AGENTS-HOME-SPEC.md` (sections on `~/.agents` as a link and `~/.agents.local` are superseded by this README).
+Migrating the work machine: `WORK-MIGRATION.md`. Design history and the original migration spec: `AGENTS-HOME-SPEC.md` (sections on `~/.agents` as a link and `~/.agents.local` are superseded by this README).
