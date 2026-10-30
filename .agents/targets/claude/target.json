@@ -1,0 +1,17 @@
+{
+  "tool": "claude",
+  "verified_version": "Claude Code (bullens, 2026-10-29)",
+  "capabilities": {
+    "instructions": {"mode": "manual", "via": "~/.claude/CLAUDE.md starts with @~/.agents/AGENTS.md; the rest is hand-written personal context, so agents-sync does not own it"},
+    "skills": {"mode": "link", "dest": "~/.claude/skills/",
+               "exclude": ["healthcheck", "agent-stack-audit", "hook-audit", "kiro-agent-config-reference",
+                           "kiro-agent-spec", "resource-integrity-audit", "skill-coverage-audit", "state-audit"]}
+  },
+  "exclude_why": "Kiro-only skills (they audit ~/.kiro). healthcheck would also collide with project skills of the same name, e.g. konserver.lol's /healthcheck",
+  "evidence": [
+    {"date": "2026-10-29", "check": "symlinked skill folder in ~/.claude/skills is listed and usable", "result": "yes",
+     "how": "network-health and planning-with-files links appeared in a Claude Code session's skill list"},
+    {"date": "2026-10-29", "check": "@-import of ~/.agents/AGENTS.md from ~/.claude/CLAUDE.md", "result": "unverified",
+     "how": "documented Claude Code behaviour; confirm in a fresh session"}
+  ]
+}

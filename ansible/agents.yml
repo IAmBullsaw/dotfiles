@@ -1,59 +1,36 @@
-# Installs the agents/ folder from dotfiles. No root required.
+# Sets up agents-sync from dotfiles/.agents. No root required.
 #
 # Include from your dotfiles playbook, e.g.:
 #   - import_tasks: ansible/agents.yml
 #     tags: [agents]
 #
 # Variables:
-#   dotfiles_dir       path to the dotfiles checkout   (default: ~/dotfiles)
-#   agents_sync_apply  run `agents-sync sync` for real  (default: false → plan only)
+#   dotfiles_dir       path to the dotfiles checkout              (default: ~/dotfiles)
+#   agents_work_dir    work repo's .agents folder, optional       (default: ~/dotwork/.agents)
+#   agents_sync_apply  run `agents-sync sync` for real            (default: false → plan only)
 #
-# Ansible only places the folder and calls agents-sync. Tool links
-# (~/.kiro/agents/main.json etc.) are created by agents-sync, so its manifest
-# stays the single record of what was created.
+# Ansible only links the CLI and calls it. ~/.agents (the generated merged view)
+# and every tool link are created by agents-sync, so its manifest stays the
+# single record of what was created. It never passes --adopt: migrating an old
+# ~/.agents link or a hand-written ~/.claude/CLAUDE.md is a one-time manual step
+# (`agents-sync sync --adopt`, after reading the dry run).
 
 - name: agents | resolve paths
   ansible.builtin.set_fact:
-    _agents_src: "{{ dotfiles_dir | default(ansible_env.HOME ~ '/dotfiles') }}/agents"
-    _agents_dst: "{{ ansible_env.HOME }}/.agents"
+    _agents_src: "{{ dotfiles_dir | default(ansible_env.HOME ~ '/dotfiles') }}/.agents"
+    _agents_work: "{{ agents_work_dir | default(ansible_env.HOME ~ '/dotwork/.agents') }}"
     _agents_bin: "{{ ansible_env.HOME }}/.local/bin"
     _agents_apply: "{{ agents_sync_apply | default(false) | bool }}"
 
-- name: agents | source folder exists
+- name: agents | check for agents-sync
   ansible.builtin.stat:
-    path: "{{ _agents_src }}"
-  register: _agents_src_stat
+    path: "{{ _agents_src }}/bin/agents-sync"
+  register: _agents_sync_stat
 
-- name: agents | fail if dotfiles/agents is missing
+- name: agents | fail if dotfiles/.agents is missing
   ansible.builtin.fail:
-    msg: "{{ _agents_src }} not found. Is dotfiles_dir correct?"
-  when: not _agents_src_stat.stat.exists
-
-- name: agents | inspect existing ~/.agents
-  ansible.builtin.stat:
-    path: "{{ _agents_dst }}"
-    follow: false
-  register: _agents_dst_stat
-
-- name: agents | refuse to replace a real ~/.agents
-  ansible.builtin.fail:
-    msg: >-
-      {{ _agents_dst }} exists and is not a symlink. Move its contents into
-      dotfiles/agents (or ~/.agents.local) by hand, then re-run.
-  when: _agents_dst_stat.stat.exists and not _agents_dst_stat.stat.islnk
-
-- name: agents | refuse to repoint a foreign ~/.agents link
-  ansible.builtin.fail:
-    msg: "{{ _agents_dst }} links to {{ _agents_dst_stat.stat.lnk_source }}, not {{ _agents_src }}."
-  when:
-    - _agents_dst_stat.stat.islnk | default(false)
-    - _agents_dst_stat.stat.lnk_source != _agents_src
-
-- name: agents | link ~/.agents -> dotfiles/agents
-  ansible.builtin.file:
-    src: "{{ _agents_src }}"
-    dest: "{{ _agents_dst }}"
-    state: link
+    msg: "{{ _agents_src }}/bin/agents-sync not found. Is dotfiles_dir correct?"
+  when: not _agents_sync_stat.stat.exists
 
 - name: agents | ensure ~/.local/bin
   ansible.builtin.file:
@@ -61,44 +38,34 @@
     state: directory
     mode: "0755"
 
-- name: agents | check for agents-sync
-  ansible.builtin.stat:
-    path: "{{ _agents_src }}/bin/agents-sync"
-  register: _agents_sync_stat
-
 - name: agents | link agents-sync into ~/.local/bin
   ansible.builtin.file:
     src: "{{ _agents_src }}/bin/agents-sync"
     dest: "{{ _agents_bin }}/agents-sync"
     state: link
-  when: _agents_sync_stat.stat.exists
 
 - name: agents | validate content
-  ansible.builtin.command: "{{ _agents_src }}/bin/agents-sync check"
+  ansible.builtin.command: >-
+    {{ _agents_src }}/bin/agents-sync --personal {{ _agents_src }} --work {{ _agents_work }} check
   changed_when: false
-  when: _agents_sync_stat.stat.exists
+  check_mode: false          # read-only, so it runs in --check too
 
 - name: agents | plan (dry run)
-  ansible.builtin.command: "{{ _agents_src }}/bin/agents-sync sync --dry-run"
+  ansible.builtin.command: >-
+    {{ _agents_src }}/bin/agents-sync --personal {{ _agents_src }} --work {{ _agents_work }} sync --dry-run
   register: _agents_plan
   changed_when: false
-  when: _agents_sync_stat.stat.exists
+  check_mode: false
+  # exit 1 = conflicts: shown below, and the apply step then stops on them
+  failed_when: _agents_plan.rc not in [0, 1]
 
 - name: agents | show plan
   ansible.builtin.debug:
     var: _agents_plan.stdout_lines
-  when: _agents_sync_stat.stat.exists
 
 - name: agents | apply
-  ansible.builtin.command: "{{ _agents_src }}/bin/agents-sync sync"
+  ansible.builtin.command: >-
+    {{ _agents_src }}/bin/agents-sync --personal {{ _agents_src }} --work {{ _agents_work }} sync
   register: _agents_apply_out
-  # agents-sync should print "no changes" when idempotent; adjust to its real output.
   changed_when: "'no changes' not in _agents_apply_out.stdout"
-  when:
-    - _agents_sync_stat.stat.exists
-    - _agents_apply
-
-- name: agents | note when agents-sync is not built yet
-  ansible.builtin.debug:
-    msg: "agents-sync not found in {{ _agents_src }}/bin; only ~/.agents was linked."
-  when: not _agents_sync_stat.stat.exists
+  when: _agents_apply

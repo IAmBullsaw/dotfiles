@@ -181,7 +181,7 @@
         mode: "0755"
       tags: dotfiles
 
-    # ── agents: ~/.agents -> dotfiles/agents (see agents/README.md) ───────────
+    # ── agents: agents-sync builds ~/.agents from dotfiles/.agents (see .agents/README.md)
     # Run only with --tags agents on the work VDI: the rest of this play uses become/apt.
     - ansible.builtin.import_tasks: agents.yml
       tags: agents

@@ -1,0 +1,647 @@
+#!/usr/bin/env python3
+"""
+agents-sync - build the merged ~/.agents view and wire it into each AI CLI.
+
+  agents-sync [--personal DIR] [--work DIR] check  [--json] [--leak-patterns FILE]
+  agents-sync [--personal DIR] [--work DIR] status [--json]
+  agents-sync [--personal DIR] [--work DIR] sync   [--dry-run] [--only GROUP] [--adopt] [--json]
+  agents-sync [--personal DIR] [--work DIR] unlink [--dry-run] [--only GROUP] [--json]
+
+Sources (git repos, never written to):
+  personal  --personal, $AGENTS_PERSONAL, default: the repo this script lives in
+  work      --work, $AGENTS_WORK, default ~/dotwork/.agents (optional)
+
+Generated (owned by agents-sync, recorded in ~/.local/state/agents-sync/manifest.json):
+  view    ~/.agents: AGENTS.md (personal), AGENTS.work.md (work), skills/<name>.
+          Same skill name in both sources: the work folder replaces the personal
+          one as a whole, and the plan prints an override line.
+  claude  ~/.claude/skills/<name> -> ~/.agents/skills/<name> (minus the
+          targets/claude/target.json exclude list) and a generated
+          ~/.claude/CLAUDE.md stub importing the view. Only when ~/.claude exists.
+  kiro    targets/kiro/{agents,hooks}/* -> ~/.kiro/{agents,hooks}/, work wins per
+          file name. Only when ~/.kiro exists.
+
+Nothing it didn't create is replaced without --adopt, which backs it up first.
+Links it created are repointed or removed when the sources change.
+
+check (read-only, exit 1 on any error):
+  - skills/<name>/SKILL.md exists, starts with front matter
+  - name matches the folder, lowercase-hyphenated
+  - description non-empty, at most 1024 characters, on one line (no > or | block)
+  - top-level keys limited to name, description, metadata + ALLOWED_EXTRA
+  - the same skill name in both sources: info, work wins
+  - targets/kiro/agents/*.json and targets/claude/target.json parse as JSON
+  - AGENTS.md: warning above 50 lines
+  - leak check, personal source only: secret patterns always; work patterns from
+    --leak-patterns or <work>/agents-sync/leak-patterns.txt.
+    Reports file:line and the pattern name, never the matched text.
+"""
+import argparse
+import json
+import os
+import re
+import sys
+
+ALLOWED_EXTRA = {"type", "use_when", "version",       # round 3, R2
+                 "model", "model_notes"}             # documented valid in build-skills
+AGENTS_MD_WARN = 50
+NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+SKIP_DIRS = {".git", "__pycache__", "node_modules"}
+TEXT_MAX = 2_000_000
+SECRET_PATTERNS = [
+    ("gitlab token", re.compile(r"glpat-[A-Za-z0-9_-]{20,}")),
+    ("github token", re.compile(r"gh[pousr]_[A-Za-z0-9]{30,}")),
+    ("private key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
+    ("bearer/basic auth", re.compile(r"(?i)authorization:\s*(basic|bearer)\s+[A-Za-z0-9+/=._-]{20,}")),
+    ("private-token header", re.compile(r"(?i)private-token:\s*[A-Za-z0-9_-]{20,}")),
+    ("aws access key", re.compile(r"AKIA[0-9A-Z]{16}")),
+    ("assigned secret", re.compile(r"(?i)(token|password|passwd|secret|api_key)['\"]?\s*[:=]\s*['\"][A-Za-z0-9+/=_-]{20,}['\"]")),
+]
+
+
+def home():
+    return os.environ.get("HOME") or os.path.expanduser("~")
+
+
+SOURCES = {}
+
+
+def set_sources(personal=None, work=None):
+    here = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    SOURCES["personal"] = os.path.abspath(os.path.expanduser(
+        personal or os.environ.get("AGENTS_PERSONAL") or here))
+    SOURCES["work"] = os.path.abspath(os.path.expanduser(
+        work or os.environ.get("AGENTS_WORK") or os.path.join(home(), "dotwork", ".agents")))
+
+
+def sources():
+    if not SOURCES:
+        set_sources()
+    return [("personal", SOURCES["personal"]), ("work", SOURCES["work"])]
+
+
+def view_dir():
+    return os.path.join(home(), ".agents")
+
+
+def parse_front_matter(text):
+    """Small subset parser: top-level `key: value`, quoted strings, folded `>`/`|`
+    blocks and an indented `metadata:` map. Returns (dict, error)."""
+    if not text.startswith("---\n"):
+        return None, "no front matter (file must start with ---)"
+    end = text.find("\n---", 4)
+    if end == -1:
+        return None, "front matter not closed with ---"
+    fm, cur, block = {}, None, []
+    for line in text[4:end].split("\n"):
+        if not line.strip() or line.lstrip().startswith("#"):
+            if cur and block is not None:
+                block.append("")
+            continue
+        if line[0] in " \t":
+            if cur is None:
+                return None, f"indented line before any key: {line.strip()[:40]}"
+            block.append(line.strip())
+            continue
+        if cur is not None:
+            fm[cur] = _finish(fm[cur], block)
+        m = re.match(r"^([A-Za-z_][\w-]*):\s*(.*)$", line)
+        if not m:
+            return None, f"cannot parse line: {line[:40]}"
+        cur, val, block = m.group(1), m.group(2).strip(), []
+        fm[cur] = val
+    if cur is not None:
+        fm[cur] = _finish(fm[cur], block)
+    return fm, None
+
+
+def _finish(val, block):
+    if val in (">", "|", ">-", "|-", ""):
+        sep = "\n" if val.startswith("|") else " "
+        return sep.join(b for b in block).strip() if val else ({"_block": block} if block else "")
+    if len(val) >= 2 and val[0] == val[-1] and val[0] in "\"'":
+        return val[1:-1]
+    return val
+
+
+def iter_text_files(root):
+    for dp, dn, fn in os.walk(root):
+        dn[:] = [d for d in dn if d not in SKIP_DIRS]
+        for f in fn:
+            p = os.path.join(dp, f)
+            if os.path.islink(p) or not os.path.isfile(p) or os.path.getsize(p) > TEXT_MAX:
+                continue
+            try:
+                with open(p, encoding="utf-8") as fh:
+                    yield p, fh.read()
+            except (UnicodeDecodeError, OSError):
+                continue
+
+
+def load_leak_patterns(path):
+    pats = []
+    with open(path, encoding="utf-8") as fh:
+        for n, line in enumerate(fh, 1):
+            s = line.strip()
+            if not s or s.startswith("#"):
+                continue
+            try:
+                pats.append((f"work pattern #{n}", re.compile(s, re.I)))
+            except re.error as e:
+                raise SystemExit(f"bad regex in {path}:{n}: {e}")
+    return pats
+
+
+def check(leak_file=None):
+    errors, warnings, info = [], [], []
+    seen = {}
+    srcs = sources()
+    if not os.path.isdir(srcs[0][1]):
+        errors.append(f"{srcs[0][1]} does not exist")
+    if os.path.realpath(srcs[0][1]) == os.path.realpath(srcs[1][1]):
+        errors.append("personal and work point at the same folder")
+    v = view_dir()
+    if os.path.islink(v):
+        warnings.append(f"{tilde(v)} is a link to {os.readlink(v)}, not the generated view. "
+                        "Run `agents-sync sync --adopt` once to migrate (the link is backed up)")
+    for label, root in srcs:
+        if not os.path.isdir(root):
+            info.append(f"{label}: {root} not present")
+            continue
+        sk = os.path.join(root, "skills")
+        names = sorted(os.listdir(sk)) if os.path.isdir(sk) else []
+        info.append(f"{label}: {len([n for n in names if os.path.isdir(os.path.join(sk, n))])} skills in {root}")
+        for name in names:
+            d = os.path.join(sk, name)
+            if not os.path.isdir(d):
+                continue
+            where = f"{label}:skills/{name}"
+            if not NAME_RE.match(name):
+                errors.append(f"{where}: folder name must be lowercase-hyphenated")
+            p = os.path.join(d, "SKILL.md")
+            if not os.path.isfile(p):
+                errors.append(f"{where}: no SKILL.md")
+                continue
+            raw = open(p, encoding="utf-8", errors="replace").read()
+            if re.search(r"^description:[ \t]*[>|]", raw.split("\n---", 1)[0], re.M):
+                errors.append(f"{where}/SKILL.md: folded/literal description (>, |): Kiro shows it as '>' "
+                              "and the triggers are lost. Use one double-quoted line")
+            fm, err = parse_front_matter(raw)
+            if err:
+                errors.append(f"{where}/SKILL.md: {err}")
+                continue
+            if fm.get("name") != name:
+                errors.append(f"{where}/SKILL.md: name '{fm.get('name')}' does not match folder")
+            desc = fm.get("description")
+            if not isinstance(desc, str) or not desc.strip():
+                errors.append(f"{where}/SKILL.md: description missing or empty")
+            elif len(desc) > 1024:
+                errors.append(f"{where}/SKILL.md: description is {len(desc)} chars (max 1024)")
+            extra = set(fm) - {"name", "description", "metadata"} - ALLOWED_EXTRA
+            if extra:
+                errors.append(f"{where}/SKILL.md: keys not allowed at top level: {', '.join(sorted(extra))} "
+                              "(move under metadata:, or add to ALLOWED_EXTRA)")
+            if name in seen:
+                info.append(f"override: skills/{name}: {label} replaces {seen[name]}")
+            seen.setdefault(name, label)
+        ag = os.path.join(root, "targets", "kiro", "agents")
+        if os.path.isdir(ag):
+            for f in sorted(os.listdir(ag)):
+                if f.endswith(".json"):
+                    try:
+                        json.load(open(os.path.join(ag, f), encoding="utf-8"))
+                    except ValueError as e:
+                        errors.append(f"{label}:targets/kiro/agents/{f}: invalid JSON ({e})")
+        ct = os.path.join(root, "targets", "claude", "target.json")
+        if os.path.isfile(ct):
+            try:
+                json.load(open(ct, encoding="utf-8"))
+            except ValueError as e:
+                errors.append(f"{label}:targets/claude/target.json: invalid JSON ({e})")
+        am = os.path.join(root, "AGENTS.md")
+        if os.path.isfile(am):
+            n = sum(1 for _ in open(am, encoding="utf-8", errors="replace"))
+            if n > AGENTS_MD_WARN:
+                warnings.append(f"{label}:AGENTS.md is {n} lines (target {AGENTS_MD_WARN})")
+
+    # leak check: personal source only
+    personal = srcs[0][1]
+    leak_file = leak_file or os.path.join(srcs[1][1], "agents-sync", "leak-patterns.txt")
+    pats = list(SECRET_PATTERNS)
+    if os.path.isfile(leak_file):
+        pats += load_leak_patterns(leak_file)
+        info.append(f"leak check: {len(pats)} patterns ({len(SECRET_PATTERNS)} secret + work patterns from {leak_file})")
+    else:
+        warnings.append(f"leak check limited to secret patterns: {leak_file} not found")
+    if os.path.isdir(personal):
+        for p, text in iter_text_files(personal):
+            rel = os.path.relpath(p, personal)
+            for n, line in enumerate(text.splitlines(), 1):
+                for pname, rx in pats:
+                    if rx.search(line):
+                        errors.append(f"leak: personal:{rel}:{n}: matches {pname}")
+                        break
+    return {"errors": errors, "warnings": warnings, "info": info}
+
+
+# ---------------------------------------------------------------- sync
+
+KIRO_KINDS = {"agents": ("*.json",), "hooks": ("*.py", "*.sh")}
+GROUPS = ("view", "claude", "kiro")
+STUB_MARK = "<!-- Generated by agents-sync."
+
+
+def state_dir():
+    xdg = os.environ.get("XDG_STATE_HOME")
+    return os.path.join(xdg, "agents-sync") if xdg else os.path.join(home(), ".local", "state", "agents-sync")
+
+
+def tilde(p):
+    h = home()
+    return "~" + p[len(h):] if p == h or p.startswith(h + os.sep) else p
+
+
+def untilde(p):
+    return os.path.join(home(), p[2:]) if p.startswith("~/") else p
+
+
+def sha256(path):
+    import hashlib
+    with open(path, "rb") as fh:
+        return hashlib.sha256(fh.read()).hexdigest()
+
+
+def load_manifest():
+    p = os.path.join(state_dir(), "manifest.json")
+    if os.path.exists(p):
+        with open(p, encoding="utf-8") as fh:
+            return json.load(fh)
+    return {"version": 1, "entries": []}
+
+
+def save_manifest(m):
+    d = state_dir()
+    os.makedirs(d, exist_ok=True)
+    tmp = os.path.join(d, ".manifest.json.tmp")
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(m, fh, indent=1)
+    os.replace(tmp, os.path.join(d, "manifest.json"))
+
+
+def group_of(path):
+    """Which group a destination belongs to; also covers manifests written before groups existed."""
+    h = home()
+    for g, root in (("view", ".agents"), ("claude", ".claude"), ("kiro", ".kiro")):
+        if path == os.path.join(h, root) or path.startswith(os.path.join(h, root) + os.sep):
+            return g
+    return None
+
+
+def resolve_skills():
+    """{name: (dir, label)}, personal first, then work replaces whole folders; plus override notes."""
+    win, overrides = {}, []
+    for label, root in sources():
+        sk = os.path.join(root, "skills")
+        for name in sorted(os.listdir(sk)) if os.path.isdir(sk) else []:
+            d = os.path.join(sk, name)
+            if name.startswith(".") or not os.path.isfile(os.path.join(d, "SKILL.md")):
+                continue
+            if name in win:
+                overrides.append(f"skills/{name}: {label} replaces {win[name][1]}")
+            win[name] = (d, label)
+    return win, overrides
+
+
+def desired(only=None):
+    """Ordered list of what should exist. Each item: dest, kind (dir|link|file), source or content, from."""
+    import fnmatch
+    want, overrides, warnings = [], [], []
+    h, view = home(), view_dir()
+
+    def add(dest, kind, src=None, content=None, label="-"):
+        if not only or group_of(dest) == only:
+            want.append({"dest": dest, "kind": kind, "source": src, "content": content, "from": label})
+
+    (pl, proot), (wl, wroot) = sources()
+    skills, overrides = resolve_skills()
+    add(view, "dir")
+    add(os.path.join(view, "skills"), "dir")
+    for name, (d, label) in sorted(skills.items()):
+        add(os.path.join(view, "skills", name), "link", d, label=label)
+    instr = []
+    for label, root, fname in ((pl, proot, "AGENTS.md"), (wl, wroot, "AGENTS.work.md")):
+        if os.path.isfile(os.path.join(root, "AGENTS.md")):
+            add(os.path.join(view, fname), "link", os.path.join(root, "AGENTS.md"), label=label)
+            instr.append(fname)
+
+    claude = os.path.join(h, ".claude")
+    if os.path.isdir(claude):
+        exclude = set()
+        for _, root in sources():
+            c = os.path.join(root, "targets", "claude", "target.json")
+            if os.path.isfile(c):
+                with open(c, encoding="utf-8") as fh:
+                    exclude |= set(json.load(fh).get("capabilities", {}).get("skills", {}).get("exclude", []))
+        for name, (_, label) in sorted(skills.items()):
+            if name not in exclude:
+                add(os.path.join(claude, "skills", name), "link", os.path.join(view, "skills", name), label=label)
+        stub = (f"{STUB_MARK} Do not edit: change {tilde(proot)} (or the work repo) "
+                "and run `agents-sync sync`. -->\n" + "".join(f"@~/.agents/{f}\n" for f in instr))
+        add(os.path.join(claude, "CLAUDE.md"), "file", content=stub)
+
+    kiro = os.path.join(h, ".kiro")
+    # Machines without Kiro (e.g. home) must not get a ~/.kiro created for them.
+    if os.path.isdir(kiro):
+        files = {}
+        for label, root in sources():
+            for kind, globs in KIRO_KINDS.items():
+                d = os.path.join(root, "targets", "kiro", kind)
+                for f in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+                    src = os.path.join(d, f)
+                    if f.startswith(".") or not os.path.isfile(src) or not any(fnmatch.fnmatch(f, g) for g in globs):
+                        continue
+                    dest = os.path.join(kiro, kind, f)
+                    if dest in files:
+                        overrides.append(f"kiro/{kind}/{f}: {label} replaces {files[dest][1]}")
+                    files[dest] = (src, label)
+        for dest, (src, label) in sorted(files.items()):
+            add(dest, "link", src, label=label)
+    return want, overrides, warnings
+
+
+def in_source(path):
+    """True when path, through any symlinked parent, lands inside a source repo."""
+    real = os.path.realpath(os.path.dirname(path))
+    real = os.path.join(real, os.path.basename(path))
+    for _, root in sources():
+        r = os.path.realpath(root)
+        if real == r or real.startswith(r + os.sep):
+            return True
+    return False
+
+
+def plan_sync(only=None, adopt=False):
+    m = load_manifest()
+    owned = {untilde(e["path"]): e for e in m["entries"]}
+    want, overrides, warnings = desired(only)
+    actions, replaced = [], []
+    for w in want:
+        dest, kind, e = w["dest"], w["kind"], owned.get(w["dest"])
+        if any(dest.startswith(r + os.sep) for r in replaced):
+            # Parent gets replaced first; what is visible here now is the old thing (e.g. the
+            # personal repo seen through the old ~/.agents link) and must not be touched.
+            actions.append(("create", w))
+            continue
+        if in_source(dest):
+            actions.append(("conflict:inside-source-repo", w))
+            continue
+        if kind == "dir":
+            if os.path.isdir(dest) and not os.path.islink(dest):
+                a = "ok" if e else ("adopt" if adopt else "conflict:real-dir")
+            elif os.path.lexists(dest):
+                # e.g. ~/.agents still being the old link to the personal repo
+                a = "adopt" if adopt else "conflict:in-the-way"
+                replaced.append(dest)
+            else:
+                a = "create"
+        elif kind == "link":
+            if os.path.islink(dest):
+                if e:
+                    a = "ok" if os.readlink(dest) == w["source"] else "relink"
+                else:
+                    a = "conflict:foreign-link"
+            elif os.path.exists(dest):
+                a = "adopt" if adopt else "conflict:real-file"
+            else:
+                a = "create"
+        else:
+            if os.path.islink(dest) or (os.path.exists(dest) and not os.path.isfile(dest)):
+                a = "adopt" if adopt else "conflict:in-the-way"
+            elif not os.path.exists(dest):
+                a = "create"
+            elif not e:
+                a = "adopt" if adopt else "conflict:real-file"
+            elif sha256(dest) != e.get("sha256"):
+                a = "adopt" if adopt else "conflict:edited-by-hand"
+            else:
+                with open(dest, encoding="utf-8") as fh:
+                    a = "ok" if fh.read() == w["content"] else "regenerate"
+        actions.append((a, w))
+    wanted = {w["dest"] for w in want}
+    for dest, e in owned.items():
+        if dest in wanted or (only and group_of(dest) != only):
+            continue
+        # Previously generated, no longer wanted: remove only if still exactly what we made.
+        if e["kind"] == "link":
+            ours = os.path.islink(dest) and os.readlink(dest) == untilde(e["source"])
+        elif e["kind"] == "file":
+            ours = os.path.isfile(dest) and not os.path.islink(dest) and sha256(dest) == e.get("sha256")
+        else:
+            ours = os.path.isdir(dest) and not os.path.islink(dest)
+        gone = not os.path.lexists(dest)
+        if not gone and in_source(dest):
+            ours = False
+        actions.append(("forget" if gone else "remove" if ours else "keep:changed-by-hand",
+                        {"dest": dest, "kind": e["kind"], "source": untilde(e.get("source", "")) or None,
+                         "content": None, "from": e.get("from", "-")}))
+    return actions, overrides, warnings
+
+
+def backup(path, stamp):
+    rel = os.path.relpath(path, home())
+    dst = os.path.join(state_dir(), "backups", stamp, rel)
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    os.rename(path, dst)
+    return tilde(dst)
+
+
+def report(actions, overrides, warnings):
+    return {"actions": [{"action": a, "path": tilde(w["dest"]), "source": tilde(w["source"] or ""), "from": w["from"]}
+                        for a, w in actions],
+            "overrides": overrides, "warnings": warnings}
+
+
+def do_sync(only=None, adopt=False, dry=False):
+    import datetime
+    actions, overrides, warnings = plan_sync(only, adopt)
+    out = report(actions, overrides, warnings)
+    if dry or any(a.startswith("conflict") for a, _ in actions):
+        out["status"] = "conflict" if any(a.startswith("conflict") for a, _ in actions) else "planned"
+        return out
+    m = load_manifest()
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    changed = 0
+
+    for a, w in actions:
+        if a not in ("ok", "forget") and not a.startswith("keep") and in_source(w["dest"]) \
+                and not any(w["dest"].startswith(x["dest"] + os.sep) for b, x in actions if b == "adopt"):
+            raise SystemExit(f"refusing to touch {w['dest']}: it resolves inside a source repo")
+
+    def drop(dest):
+        m["entries"] = [x for x in m["entries"] if untilde(x["path"]) != dest]
+
+    # Removals deepest first, so a directory is empty by the time we reach it.
+    for a, w in sorted((x for x in actions if x[0] in ("remove", "forget")), key=lambda x: x[1]["dest"], reverse=True):
+        dest = w["dest"]
+        if a == "remove":
+            if w["kind"] == "dir":
+                if os.listdir(dest):
+                    warnings.append(f"{tilde(dest)} not empty, left in place")
+                    continue
+                os.rmdir(dest)
+            else:
+                os.remove(dest)
+        drop(dest)
+        save_manifest(m)
+        changed += 1
+    # Creations shallowest first (actions are already in that order).
+    for a, w in actions:
+        if a in ("ok", "remove", "forget") or a.startswith("keep"):
+            continue
+        dest, kind = w["dest"], w["kind"]
+        entry = {"path": tilde(dest), "kind": kind, "group": group_of(dest), "from": w["from"], "created_at": stamp}
+        if a == "adopt":
+            entry["backup"] = backup(dest, stamp)
+        elif a in ("relink", "regenerate"):
+            os.remove(dest)
+        prev = [x for x in m["entries"] if untilde(x["path"]) == dest]
+        if prev and "backup" in prev[0] and "backup" not in entry:
+            entry["backup"] = prev[0]["backup"]          # keep the original backup across relinks
+        drop(dest)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        if kind == "dir":
+            os.makedirs(dest, exist_ok=True)
+        elif kind == "link":
+            os.symlink(w["source"], dest)
+            entry["source"] = tilde(w["source"])
+        else:
+            with open(dest, "w", encoding="utf-8") as fh:
+                fh.write(w["content"])
+            entry["sha256"] = sha256(dest)
+        m["entries"].append(entry)
+        save_manifest(m)                      # after every action: a killed run is resumable
+        changed += 1
+    out = report(actions, overrides, warnings)
+    out["status"] = "ok" if changed else "no changes"
+    out["changed"] = changed
+    return out
+
+
+def do_unlink(only=None, dry=False):
+    m = load_manifest()
+    remaining = list(m["entries"])
+    items = []
+    for e in sorted(m["entries"], key=lambda x: untilde(x["path"]), reverse=True):
+        p = untilde(e["path"])
+        if only and group_of(p) != only:
+            continue
+        kind = e.get("kind", "link")
+        if kind == "link":
+            ok = os.path.islink(p) and os.readlink(p) == untilde(e["source"])
+            why = "missing, changed or replaced, left alone"
+        elif kind == "file":
+            ok = os.path.isfile(p) and not os.path.islink(p) and sha256(p) == e.get("sha256")
+            why = "edited by hand or missing, left alone"
+        else:
+            # children were handled first (deepest-first order), so ours is empty now
+            ok = os.path.isdir(p) and not os.path.islink(p) and not os.listdir(p)
+            why = "contains things agents-sync did not create, left alone"
+        if ok and in_source(p):
+            ok, why = False, "resolves inside a source repo, left alone"
+        if not ok:
+            items.append({"path": e["path"], "result": why})
+            continue
+        items.append({"path": e["path"], "result": "removed" + (", backup restored" if e.get("backup") else "")})
+        if dry:
+            continue
+        if kind == "dir":
+            os.rmdir(p)
+        else:
+            os.remove(p)
+        if e.get("backup"):
+            os.rename(untilde(e["backup"]), p)
+        remaining.remove(e)
+        save_manifest({"version": 1, "entries": remaining})   # after every action
+    return {"status": "planned" if dry else "ok", "items": items}
+
+
+def do_status():
+    m = load_manifest()
+    items = []
+    for e in m["entries"]:
+        p, kind = untilde(e["path"]), e.get("kind", "link")
+        if kind == "link":
+            st = ("missing" if not os.path.islink(p) else "drifted" if os.readlink(p) != untilde(e["source"])
+                  else "stale (source gone)" if not os.path.exists(p) else "ok")
+        elif kind == "file":
+            st = "missing" if not os.path.isfile(p) else "edited by hand" if sha256(p) != e.get("sha256") else "ok"
+        else:
+            st = "ok" if os.path.isdir(p) and not os.path.islink(p) else "missing"
+        items.append({"path": e["path"], "kind": kind, "state": st})
+    actions, overrides, warnings = plan_sync()
+    pending = [{"action": a, "path": tilde(w["dest"])} for a, w in actions if a != "ok"]
+    return {"managed": items, "pending": pending, "overrides": overrides, "warnings": warnings,
+            "sources": [{"label": lb, "root": tilde(r), "present": os.path.isdir(r)} for lb, r in sources()]}
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="agents-sync", description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--personal", help="personal source (default: $AGENTS_PERSONAL or this script's repo)")
+    ap.add_argument("--work", help="work source (default: $AGENTS_WORK or ~/dotwork/.agents)")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    c = sub.add_parser("check", help="validate both sources (read-only)")
+    c.add_argument("--json", action="store_true")
+    c.add_argument("--leak-patterns", help="work-pattern file (default: <work>/agents-sync/leak-patterns.txt)")
+    st = sub.add_parser("status", help="managed items and pending changes (read-only)")
+    st.add_argument("--json", action="store_true")
+    sy = sub.add_parser("sync", help="build ~/.agents and link it into each CLI")
+    sy.add_argument("--dry-run", action="store_true")
+    sy.add_argument("--only", choices=GROUPS)
+    sy.add_argument("--adopt", action="store_true", help="back up and replace files in the way")
+    sy.add_argument("--json", action="store_true")
+    un = sub.add_parser("unlink", help="remove what agents-sync created, restore backups")
+    un.add_argument("--dry-run", action="store_true")
+    un.add_argument("--only", choices=GROUPS)
+    un.add_argument("--json", action="store_true")
+    a = ap.parse_args()
+    set_sources(a.personal, a.work)
+
+    if a.cmd in ("status", "sync", "unlink"):
+        if a.cmd == "status":
+            r = do_status()
+        elif a.cmd == "sync":
+            r = do_sync(a.only, a.adopt, a.dry_run)
+        else:
+            r = do_unlink(a.only, a.dry_run)
+        if a.json:
+            print(json.dumps(r, indent=1))
+        else:
+            for o in r.get("overrides", []):
+                print(f"override {o}")
+            for w in r.get("warnings", []):
+                print(f"warning {w}")
+            for x in r.get("actions", []) + r.get("managed", []) + r.get("pending", []) + r.get("items", []):
+                if x.get("action") == "ok" or x.get("state") == "ok":
+                    continue
+                print("  " + "  ".join(str(v) for v in x.values()))
+            print(f"{a.cmd}: {r.get('status', 'ok')}" + (f", {r['changed']} changed" if "changed" in r else ""))
+            if a.cmd == "sync" and r.get("status") in ("ok", "no changes") and not r.get("changed"):
+                print("no changes")
+        sys.exit(1 if r.get("status") == "conflict" else 0)
+
+    if a.cmd == "check":
+        r = check(a.leak_patterns and os.path.expanduser(a.leak_patterns))
+        r["status"] = "error" if r["errors"] else "ok"
+        if a.json:
+            print(json.dumps(r, indent=1))
+        else:
+            for k in ("info", "warnings", "errors"):
+                for m in r[k]:
+                    print(f"{k[:-1] if k != 'info' else 'info':7} {m}")
+            print(f"\ncheck: {len(r['errors'])} errors, {len(r['warnings'])} warnings")
+        sys.exit(1 if r["errors"] else 0)
+
+
+if __name__ == "__main__":
+    main()
