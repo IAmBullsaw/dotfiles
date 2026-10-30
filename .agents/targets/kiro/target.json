@@ -25,7 +25,9 @@
      "how": "agent listing only ~/.agents* still listed a skill that exists only in ~/.kiro/skills; seen twice"},
     {"date": "2026-10-26", "check": "same skill name from two skill:// globs, or a glob plus ~/.kiro/skills", "result": "NO shadowing: both entries are listed",
      "how": "dupe-x in folders A and B, both orders: 2 entries; a skill present in both ~/.agents.local and ~/.kiro/skills: 2 entries"},
-    {"date": "2026-10-30", "check": "agents with skill:// and file:// into the generated ~/.agents view (symlinked skill folders)", "result": "unverified",
-     "how": "to test on the work machine after migrating: skill list shows each skill once, the work version for overridden names"}
+    {"date": "2026-10-30", "check": "agents with skill:// and file:// into the generated ~/.agents view (symlinked skill folders)", "result": "yes: each skill listed once, overridden name shows the overlay version, both AGENTS files loaded (kiro-cli 2.25.0, engine v2)",
+     "how": "after agents-sync sync --adopt: 87 skill links, 0 broken; fresh --no-interactive main-agent session counted 3 sample names once each and quoted the overlay example of the overridden skill; hooks fired (events log +4)"},
+    {"date": "2026-10-30", "check": "how file:// resources through symlinks are labelled in context", "result": "by the resolved real path, not the ~/.agents path",
+     "how": "same session: asked for ~/.agents/AGENTS.md and AGENTS.work.md, model reported the dotfiles and overlay AGENTS.md paths instead; content present"}
   ]
 }
