@@ -72,11 +72,18 @@ Precedence inside each tool stays native and applies to project scope only: Clau
 ```bash
 nvim ~/dotfiles/.agents/skills/my-skill/SKILL.md   # write or edit (or through ~/.agents/skills/...)
 agents-sync check                                   # validate frontmatter, names, leaks, overrides
-agents-sync sync --dry-run                          # see what would change
-agents-sync sync                                    # apply: new/removed skills, overrides, stubs
-agents-sync status                                  # what it manages and whether anything drifted
+agents-sync sync kiro claude --dry-run              # see what would change
+agents-sync sync kiro claude                        # wire these CLIs (creates ~/.kiro, ~/.claude if needed)
+agents-sync sync                                    # same targets again: they are remembered
+agents-sync status                                  # what it manages, the targets, and any drift
+agents-sync unlink kiro                             # undo one CLI and forget it
 agents-sync unlink                                  # remove everything it made, restore backups
 ```
+
+Targets are `kiro` and `claude`; the `~/.agents` view is always built. A named target gets
+its home folders created and recorded, and `unlink` removes those again only while they are
+empty, so a `~/.kiro` that Kiro has started using stays. Without names and with nothing
+remembered yet, the CLIs whose home already exists are used.
 
 Paths: `--personal` / `$AGENTS_PERSONAL` (default: the repo `agents-sync` lives in), `--work` / `$AGENTS_WORK` (default `~/dotwork/.agents`, optional).
 
@@ -103,18 +110,19 @@ Editing a skill's content needs no sync. Adding, removing or overriding a skill 
 
 1. Find out, from its docs and a quick test, where it reads instructions and skills, and whether it follows symlinks. Record the result in `targets/<tool>/target.json` with a dated evidence entry.
 2. If it reads `~/.agents/skills` or `AGENTS.md` natively, stop: nothing to build.
-3. Otherwise add its items in `desired()` in `bin/agents-sync`: links into its home pointing at `~/.agents/...`, or a generated stub when it needs its own file. Only when its home directory exists.
-4. Add tests in `tests/test_agents_sync_sync.py` (links, excludes, rerun, no home → nothing created).
+3. Otherwise add its items in `desired()` in `bin/agents-sync`: links into its home pointing at `~/.agents/...`, or a generated stub when it needs its own file, under `if "<tool>" in targets`, plus its name in `TARGETS`.
+4. Add tests in `tests/test_agents_sync_sync.py` (links, excludes, rerun, named → home created, not named → nothing created).
 5. Add a row to the table above.
 
 ## New machine
 
-Ansible (`ansible/agents.yml`) links `agents-sync` into `~/.local/bin`, runs `check` and `sync --dry-run`, and applies only with `agents_sync_apply=true`. It never passes `--adopt` and never creates tool links itself.
+Ansible (`ansible/agents.yml`) links `agents-sync` into `~/.local/bin`, runs `check` and `sync <targets> --dry-run`, and applies only with `agents_sync_apply=true`. Targets come from `agents_targets` (default `kiro`; `""` on a machine with neither CLI). It never passes `--adopt` and never creates tool links itself.
 
 ```bash
 ansible-playbook setup.yml --tags agents                                      # plan only
 ansible-playbook setup.yml --tags agents -e agents_sync_apply=true
-ansible-playbook setup.yml --tags agents -e agents_work_dir=~/dot-ai/.agents  # work repo elsewhere
+ansible-playbook setup.yml --tags agents -e agents_targets="kiro claude"     # both CLIs
+ansible-playbook setup.yml --tags agents -e agents_work_dir=~/elsewhere/.agents  # work repo elsewhere
 ```
 
 ## Never

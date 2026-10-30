@@ -75,6 +75,9 @@ class SyncTests(unittest.TestCase):
     def manifest(self):
         return json.loads(read(f"{self.home}/.local/state/agents-sync/manifest.json"))["entries"]
 
+    def targets(self):
+        return json.loads(read(f"{self.home}/.local/state/agents-sync/manifest.json")).get("targets")
+
     # --- merged view -------------------------------------------------
 
     def test_view_merges_personal_and_work(self):
@@ -188,9 +191,65 @@ class SyncTests(unittest.TestCase):
         self.assertEqual(os.readlink(f"{self.k}/hooks/bell.sh"), f"{self.p}/targets/kiro/hooks/bell.sh")
         self.assertIn("kiro/agents/ez.json: work replaces personal", r["overrides"])
 
-    def test_only_kiro(self):
-        rc, r = self.run_cmd("sync", "--only", "kiro")
-        self.assertEqual(r["changed"], 3)
+    # --- targets -------------------------------------------------------
+
+    def test_named_target_creates_its_home(self):
+        shutil.rmtree(self.k)
+        rc, r = self.run_cmd("sync", "kiro")
+        self.assertEqual((rc, r["status"], r["targets"]), (0, "ok", ["kiro"]))
+        self.assertEqual(os.readlink(f"{self.k}/agents/vault.json"), f"{self.p}/targets/kiro/agents/vault.json")
+        dirs = {e["path"] for e in self.manifest() if e["kind"] == "dir"}
+        self.assertTrue({"~/.kiro", "~/.kiro/agents", "~/.kiro/hooks"} <= dirs)
+        self.assertFalse(os.path.lexists(f"{self.c}/skills"), "claude not named, not wired")
+
+    def test_unnamed_missing_home_is_not_created(self):
+        shutil.rmtree(self.k)
+        rc, r = self.run_cmd("sync")
+        self.assertEqual(r["targets"], ["claude"])
+        self.assertFalse(os.path.exists(self.k))
+
+    def test_existing_home_is_not_recorded(self):
+        self.run_cmd("sync", "kiro")
+        paths = {e["path"] for e in self.manifest()}
+        self.assertNotIn("~/.kiro", paths, "a ~/.kiro made by Kiro is never ours")
+        self.assertIn("~/.kiro/agents", paths)
+
+    def test_targets_are_remembered(self):
+        shutil.rmtree(self.k)
+        shutil.rmtree(self.c)
+        self.run_cmd("sync", "kiro")
+        rc, r = self.run_cmd("sync")
+        self.assertEqual((r["status"], r["targets"]), ("no changes", ["kiro"]))
+        self.assertFalse(os.path.exists(self.c))
+        rc, r = self.run_cmd("sync", "claude")
+        self.assertEqual(r["targets"], ["claude", "kiro"])
+        self.assertTrue(os.path.islink(f"{self.c}/skills/tech-doc"))
+
+    def test_unlink_target_removes_created_dirs_and_forgets_it(self):
+        shutil.rmtree(self.k)
+        self.run_cmd("sync", "kiro", "claude")
+        rc, r = self.run_cmd("unlink", "kiro")
+        self.assertFalse(os.path.exists(self.k), "everything under ~/.kiro was ours and empty")
+        self.assertTrue(os.path.islink(f"{self.v}/skills/tech-doc"), "view untouched")
+        self.assertTrue(os.path.islink(f"{self.c}/skills/tech-doc"), "other target untouched")
+        self.assertEqual(self.targets(), ["claude"])
+        rc, r = self.run_cmd("sync")
+        self.assertFalse(os.path.exists(self.k), "a forgotten target is not recreated")
+
+    def test_unlink_keeps_created_home_once_the_tool_uses_it(self):
+        shutil.rmtree(self.k)
+        self.run_cmd("sync", "kiro")
+        write(f"{self.k}/settings/cli.json", "{}")
+        rc, r = self.run_cmd("unlink", "kiro")
+        self.assertEqual(read(f"{self.k}/settings/cli.json"), "{}")
+        self.assertFalse(os.path.lexists(f"{self.k}/agents"))
+
+    def test_unknown_target_is_an_error(self):
+        env = dict(os.environ, HOME=self.home)
+        p = subprocess.run([sys.executable, BIN, "--personal", self.p, "sync", "cursor"], env=env,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        self.assertEqual(p.returncode, 2)
+        self.assertIn("unknown target cursor", p.stderr)
         self.assertFalse(os.path.exists(self.v))
 
     def test_dotfiles_and_other_extensions_ignored(self):
@@ -260,10 +319,17 @@ class SyncTests(unittest.TestCase):
         self.assertFalse(os.path.islink(f"{self.k}/agents/ez.json"))
         self.assertTrue(os.path.exists(f"{self.v}/skills/stray.txt"), "folders with foreign content stay")
         left = sorted(e["path"] for e in self.manifest())
-        self.assertEqual(left, ["~/.agents", "~/.agents/skills", "~/.kiro/agents/vault.json"])
+        self.assertEqual(left, ["~/.agents", "~/.agents/skills", "~/.kiro/agents", "~/.kiro/agents/vault.json"])
 
     def test_interrupted_run_converges(self):
-        self.run_cmd("sync", "--only", "view")
+        self.run_cmd("sync")
+        m = json.loads(read(f"{self.home}/.local/state/agents-sync/manifest.json"))
+        for e in m["entries"][len(m["entries"]) // 2:]:          # as if killed halfway
+            path = e["path"].replace("~", self.home, 1)
+            if os.path.islink(path) or os.path.isfile(path):
+                os.remove(path)
+        m["entries"] = m["entries"][:len(m["entries"]) // 2]
+        write(f"{self.home}/.local/state/agents-sync/manifest.json", json.dumps(m))
         rc, r = self.run_cmd("sync")
         self.assertEqual(r["status"], "ok")
         rc, r = self.run_cmd("sync")

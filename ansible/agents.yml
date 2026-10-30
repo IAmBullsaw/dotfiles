@@ -8,6 +8,9 @@
 #   dotfiles_dir       path to the dotfiles checkout              (default: ~/dotfiles)
 #   agents_work_dir    work repo's .agents folder, optional       (default: ~/dotwork/.agents)
 #   agents_sync_apply  run `agents-sync sync` for real            (default: false → plan only)
+#   agents_targets     CLIs to wire, space-separated: kiro, claude (default: kiro)
+#                      Named targets get their ~/.kiro / ~/.claude folders created and
+#                      are remembered. Set to "" on a machine without either CLI.
 #
 # Ansible only links the CLI and calls it. ~/.agents (the generated merged view)
 # and every tool link are created by agents-sync, so its manifest stays the
@@ -21,6 +24,7 @@
     _agents_work: "{{ agents_work_dir | default(ansible_env.HOME ~ '/dotwork/.agents') }}"
     _agents_bin: "{{ ansible_env.HOME }}/.local/bin"
     _agents_apply: "{{ agents_sync_apply | default(false) | bool }}"
+    _agents_targets: "{{ agents_targets | default('kiro') }}"
 
 - name: agents | check for agents-sync
   ansible.builtin.stat:
@@ -52,7 +56,7 @@
 
 - name: agents | plan (dry run)
   ansible.builtin.command: >-
-    {{ _agents_src }}/bin/agents-sync --personal {{ _agents_src }} --work {{ _agents_work }} sync --dry-run
+    {{ _agents_src }}/bin/agents-sync --personal {{ _agents_src }} --work {{ _agents_work }} sync {{ _agents_targets }} --dry-run
   register: _agents_plan
   changed_when: false
   check_mode: false
@@ -65,7 +69,7 @@
 
 - name: agents | apply
   ansible.builtin.command: >-
-    {{ _agents_src }}/bin/agents-sync --personal {{ _agents_src }} --work {{ _agents_work }} sync
+    {{ _agents_src }}/bin/agents-sync --personal {{ _agents_src }} --work {{ _agents_work }} sync {{ _agents_targets }}
   register: _agents_apply_out
   changed_when: "'no changes' not in _agents_apply_out.stdout"
   when: _agents_apply
