@@ -8,9 +8,12 @@
 #   dotfiles_dir       path to the dotfiles checkout              (default: ~/dotfiles)
 #   agents_work_dir    work repo's .agents folder, optional       (default: ~/dotwork/.agents)
 #   agents_sync_apply  run `agents-sync sync` for real            (default: false → plan only)
-#   agents_targets     CLIs to wire, space-separated: kiro, claude (default: kiro)
-#                      Named targets get their ~/.kiro / ~/.claude folders created and
-#                      are remembered. Set to "" on a machine without either CLI.
+#   agents_targets     CLIs to wire, space-separated: kiro, claude (default: none, so
+#                      agents-sync uses the remembered targets, or on a first run the
+#                      CLIs whose home exists). Named targets get their ~/.kiro or
+#                      ~/.claude folders created and are remembered.
+#
+# If the work repo has bin/bootstrap (dotwork does), it runs after the apply.
 #
 # Ansible only links the CLI and calls it. ~/.agents (the generated merged view)
 # and every tool link are created by agents-sync, so its manifest stays the
@@ -24,7 +27,7 @@
     _agents_work: "{{ agents_work_dir | default(ansible_env.HOME ~ '/dotwork/.agents') }}"
     _agents_bin: "{{ ansible_env.HOME }}/.local/bin"
     _agents_apply: "{{ agents_sync_apply | default(false) | bool }}"
-    _agents_targets: "{{ agents_targets | default('kiro') }}"
+    _agents_targets: "{{ agents_targets | default('') }}"
 
 - name: agents | check for agents-sync
   ansible.builtin.stat:
@@ -73,3 +76,14 @@
   register: _agents_apply_out
   changed_when: "'no changes' not in _agents_apply_out.stdout"
   when: _agents_apply
+
+- name: agents | check for a work bootstrap
+  ansible.builtin.stat:
+    path: "{{ _agents_work | dirname }}/bin/bootstrap"
+  register: _agents_boot
+
+- name: agents | work bootstrap
+  ansible.builtin.command: "{{ _agents_work | dirname }}/bin/bootstrap"
+  register: _agents_boot_out
+  changed_when: _agents_boot_out.stdout is search('(?m)^(link|created|set) ')
+  when: _agents_apply and _agents_boot.stat.exists

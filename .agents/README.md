@@ -116,7 +116,7 @@ Editing a skill's content needs no sync. Adding, removing or overriding a skill 
 
 ## New machine
 
-Ansible (`ansible/agents.yml`) links `agents-sync` into `~/.local/bin`, runs `check` and `sync <targets> --dry-run`, and applies only with `agents_sync_apply=true`. Targets come from `agents_targets` (default `kiro`; `""` on a machine with neither CLI). It never passes `--adopt` and never creates tool links itself.
+Ansible (`ansible/agents.yml`) links `agents-sync` into `~/.local/bin`, runs `check` and `sync <targets> --dry-run`, and applies only with `agents_sync_apply=true`. Targets come from `agents_targets` (default empty: the remembered targets, or on a first run the CLIs whose home exists). If the work repo has `bin/bootstrap`, the play runs it after the apply; dotwork's wires Kiro and its own links. It never passes `--adopt` and never creates tool links itself.
 
 ```bash
 ansible-playbook setup.yml --tags agents                                      # plan only
