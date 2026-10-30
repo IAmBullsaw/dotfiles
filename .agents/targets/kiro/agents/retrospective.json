@@ -35,7 +35,7 @@
         "description": "Set kitty window title to current directory"
       },
       {
-        "command": "python3 $HOME/.kiro/hooks/agent-spawn.py",
+        "command": "f=$HOME/.kiro/hooks/agent-spawn.py; [ -f \"$f\" ] || exit 0; python3 \"$f\"",
         "description": "Detect work unit from git branch, write session state, log session_start"
       }
     ]

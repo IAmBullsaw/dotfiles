@@ -26,7 +26,9 @@ Generated (owned by agents-sync, recorded in ~/.local/state/agents-sync/manifest
           targets/claude/target.json exclude list) and a generated
           ~/.claude/CLAUDE.md stub importing the view.
   kiro    targets/kiro/{agents,hooks}/* -> ~/.kiro/{agents,hooks}/, work wins per
-          file name.
+          file name. targets/kiro/settings.json keys (e.g. chat.defaultAgent) are
+          set in ~/.kiro/settings/cli.json, work wins per key. A key is only set
+          when unset or still the value agents-sync set; unlink kiro removes it.
 
 Nothing it didn't create is replaced without --adopt, which backs it up first.
 Links it created are repointed or removed when the sources change.
@@ -219,6 +221,13 @@ def check(leak_file=None):
                         json.load(open(os.path.join(ag, f), encoding="utf-8"))
                     except ValueError as e:
                         errors.append(f"{label}:targets/kiro/agents/{f}: invalid JSON ({e})")
+        ks = os.path.join(root, "targets", "kiro", "settings.json")
+        if os.path.isfile(ks):
+            try:
+                if not isinstance(json.load(open(ks, encoding="utf-8")), dict):
+                    errors.append(f"{label}:targets/kiro/settings.json: not a JSON object")
+            except ValueError as e:
+                errors.append(f"{label}:targets/kiro/settings.json: invalid JSON ({e})")
         ct = os.path.join(root, "targets", "claude", "target.json")
         if os.path.isfile(ct):
             try:
@@ -410,6 +419,67 @@ def in_source(path):
     return False
 
 
+def kiro_cli_json():
+    return os.path.join(home(), ".kiro", "settings", "cli.json")
+
+
+def wanted_settings():
+    """{key: (value, label)} from targets/kiro/settings.json, work wins per key."""
+    want = {}
+    for label, root in sources():
+        f = os.path.join(root, "targets", "kiro", "settings.json")
+        if os.path.isfile(f):
+            with open(f, encoding="utf-8") as fh:
+                for k, v in json.load(fh).items():
+                    want[k] = (v, label)
+    return want
+
+
+def read_json(path):
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+    except FileNotFoundError:
+        return {}
+
+
+def plan_settings(targets, m):
+    """[(action, key, value, label)]: set (unset or still ours), ok, keep:set-by-hand, unset (ours, no longer wanted)."""
+    if "kiro" not in targets:
+        return []
+    cur, ours = read_json(kiro_cli_json()), m.get("settings", {})
+    plan = []
+    for k, (v, label) in sorted(wanted_settings().items()):
+        if cur.get(k) == v:
+            plan.append(("ok", k, v, label))
+        elif k not in cur or (k in ours and cur.get(k) == ours[k]):
+            plan.append(("set", k, v, label))
+        else:
+            plan.append(("keep:set-by-hand", k, cur.get(k), label))
+    for k, v in sorted(ours.items()):
+        if k not in wanted_settings() and cur.get(k) == v:
+            plan.append(("unset", k, v, "-"))
+    return plan
+
+
+def write_settings(changes, m):
+    """Apply set/unset to cli.json atomically, keeping every other key; record ours in the manifest."""
+    path, ours = kiro_cli_json(), dict(m.get("settings", {}))
+    cfg = read_json(path)
+    for a, k, v, _ in changes:
+        if a == "set":
+            cfg[k] = ours[k] = v
+        elif a == "unset":
+            cfg.pop(k, None)
+            ours.pop(k, None)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".agents-sync.tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(cfg, fh, indent=2, ensure_ascii=False)
+    os.replace(tmp, path)
+    m["settings"] = ours
+
+
 def plan_sync(targets=(), adopt=False):
     m = load_manifest()
     owned = {untilde(e["path"]): e for e in m["entries"]}
@@ -486,9 +556,11 @@ def backup(path, stamp):
     return tilde(dst)
 
 
-def report(actions, overrides, warnings):
+def report(actions, overrides, warnings, settings=()):
     return {"actions": [{"action": a, "path": tilde(w["dest"]), "source": tilde(w["source"] or ""), "from": w["from"]}
-                        for a, w in actions],
+                        for a, w in actions]
+            + [{"action": a, "path": f"{tilde(kiro_cli_json())}:{k}", "source": json.dumps(v, ensure_ascii=False),
+                "from": label} for a, k, v, label in settings],
             "overrides": overrides, "warnings": warnings}
 
 
@@ -496,7 +568,8 @@ def do_sync(names=(), adopt=False, dry=False):
     import datetime
     targets = active_targets(names)
     actions, overrides, warnings = plan_sync(targets, adopt)
-    out = report(actions, overrides, warnings)
+    settings = plan_settings(targets, load_manifest())
+    out = report(actions, overrides, warnings, settings)
     out["targets"] = targets
     if dry or any(a.startswith("conflict") for a, _ in actions):
         out["status"] = "conflict" if any(a.startswith("conflict") for a, _ in actions) else "planned"
@@ -554,10 +627,14 @@ def do_sync(names=(), adopt=False, dry=False):
         m["entries"].append(entry)
         save_manifest(m)                      # after every action: a killed run is resumable
         changed += 1
-    if m.get("targets") != targets:
+    changes = [s for s in settings if s[0] in ("set", "unset")]
+    if changes:
+        write_settings(changes, m)          # after the links: the default agent must exist first
+        changed += len(changes)
+    if m.get("targets") != targets or changes:
         m["targets"] = targets             # remembered, so a plain `sync` keeps them wired
         save_manifest(m)
-    out = report(actions, overrides, warnings)
+    out = report(actions, overrides, warnings, plan_settings(targets, m))
     out["targets"] = targets
     out["status"] = "ok" if changed else "no changes"
     out["changed"] = changed
@@ -605,6 +682,14 @@ def do_unlink(names=(), dry=False):
             os.rename(untilde(e["backup"]), p)
         remaining.remove(e)
         save()                                                # after every action
+    if "kiro" in groups:
+        cur = read_json(kiro_cli_json())
+        mine = [("unset", k, v, "-") for k, v in sorted(m.get("settings", {}).items()) if cur.get(k) == v]
+        items += [{"path": f"{tilde(kiro_cli_json())}:{k}", "result": "removed"} for _, k, _, _ in mine]
+        if mine and not dry:
+            write_settings(mine, m)
+        if not dry:
+            m["settings"] = {}                                # values changed by hand are no longer ours
     if not dry:
         save()                                                # forget the targets even if nothing was left
     return {"status": "planned" if dry else "ok", "items": items}
@@ -626,6 +711,8 @@ def do_status(names=()):
     targets = active_targets(names, m)
     actions, overrides, warnings = plan_sync(targets)
     pending = [{"action": a, "path": tilde(w["dest"])} for a, w in actions if a != "ok"]
+    pending += [{"action": a, "path": f"{tilde(kiro_cli_json())}:{k}"} for a, k, _, _ in plan_settings(targets, m)
+                if a != "ok"]
     return {"managed": items, "pending": pending, "overrides": overrides, "warnings": warnings, "targets": targets,
             "sources": [{"label": lb, "root": tilde(r), "present": os.path.isdir(r)} for lb, r in sources()]}
 

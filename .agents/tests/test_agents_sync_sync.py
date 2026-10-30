@@ -244,6 +244,42 @@ class SyncTests(unittest.TestCase):
         self.assertEqual(read(f"{self.k}/settings/cli.json"), "{}")
         self.assertFalse(os.path.lexists(f"{self.k}/agents"))
 
+    # --- kiro settings ------------------------------------------------
+
+    def cli(self):
+        return json.loads(read(f"{self.k}/settings/cli.json"))
+
+    def test_default_agent_set_when_unset_and_work_wins(self):
+        write(f"{self.p}/targets/kiro/settings.json", '{"chat.defaultAgent": "main"}')
+        self.run_cmd("sync", "kiro")
+        self.assertEqual(self.cli()["chat.defaultAgent"], "main")
+        write(f"{self.w}/targets/kiro/settings.json", '{"chat.defaultAgent": "ez"}')
+        rc, r = self.run_cmd("sync")
+        self.assertEqual(self.cli()["chat.defaultAgent"], "ez", "still ours, so the work value replaces it")
+        rc, r = self.run_cmd("sync")
+        self.assertEqual(r["status"], "no changes")
+
+    def test_setting_by_hand_is_kept_and_other_keys_survive(self):
+        write(f"{self.k}/settings/cli.json", '{"chat.defaultAgent": "mine", "other": 1}')
+        write(f"{self.p}/targets/kiro/settings.json", '{"chat.defaultAgent": "main"}')
+        rc, r = self.run_cmd("sync", "kiro")
+        self.assertEqual(self.cli(), {"chat.defaultAgent": "mine", "other": 1})
+        self.assertIn("keep:set-by-hand", [a["action"] for a in r["actions"]])
+
+    def test_unlink_kiro_removes_only_our_setting(self):
+        write(f"{self.k}/settings/cli.json", '{"other": 1}')
+        write(f"{self.p}/targets/kiro/settings.json", '{"chat.defaultAgent": "main"}')
+        self.run_cmd("sync", "kiro")
+        self.assertEqual(self.cli(), {"other": 1, "chat.defaultAgent": "main"})
+        self.run_cmd("unlink", "kiro")
+        self.assertEqual(self.cli(), {"other": 1})
+
+    def test_no_kiro_target_no_settings(self):
+        shutil.rmtree(self.k)
+        write(f"{self.p}/targets/kiro/settings.json", '{"chat.defaultAgent": "main"}')
+        self.run_cmd("sync", "claude")
+        self.assertFalse(os.path.exists(self.k))
+
     def test_unknown_target_is_an_error(self):
         env = dict(os.environ, HOME=self.home)
         p = subprocess.run([sys.executable, BIN, "--personal", self.p, "sync", "cursor"], env=env,

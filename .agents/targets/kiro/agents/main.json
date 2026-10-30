@@ -1,0 +1,39 @@
+{
+  "$schema": "https://raw.githubusercontent.com/aws/amazon-q-developer-cli/refs/heads/main/schemas/agent-v1.json",
+  "name": "main",
+  "description": "Personal default agent: loads ~/.agents (AGENTS.md, AGENTS.work.md if present, all skills). Portable: hooks from the work repo run only where they exist.",
+  "prompt": null,
+  "tools": ["read", "write", "shell", "grep", "glob", "code", "introspect", "knowledge", "thinking", "todo", "subagent"],
+  "allowedTools": ["read", "grep", "glob", "code"],
+  "toolsSettings": {
+    "fsWrite": {"allowedPaths": ["~/Code/**", "~/dotfiles/**", "~/.config/**", "~/.kiro/**"], "deniedPaths": []},
+    "shell": {"allowedCommands": [], "deniedCommands": [], "denyByDefault": false, "autoAllowReadonly": true}
+  },
+  "resources": [
+    "file://~/.agents/AGENTS.md",
+    "file://~/.agents/AGENTS.work.md",
+    "skill://~/.agents/skills/*/SKILL.md",
+    "skill://.agents/skills/*/SKILL.md"
+  ],
+  "hooks": {
+    "agentSpawn": [
+      {"command": "command -v kitty >/dev/null || exit 0; kitty @ set-window-title \"Kiro: $(basename $PWD)\"", "description": "Kitty window title, when running under kitty"},
+      {"command": "f=$HOME/.kiro/hooks/agent-spawn.py; [ -f \"$f\" ] || exit 0; python3 \"$f\"", "description": "Session state, if the work hook is installed"}
+    ],
+    "userPromptSubmit": [
+      {"command": "$HOME/.kiro/hooks/redact-check.sh", "description": "Warn about secrets in the prompt"},
+      {"command": "f=$HOME/.kiro/hooks/prompt-intent.py; [ -f \"$f\" ] || exit 0; python3 \"$f\"", "description": "Prompt logging, if the work hook is installed"}
+    ],
+    "preToolUse": [
+      {"command": "f=$HOME/.kiro/hooks/block-broad-search.py; [ -f \"$f\" ] || exit 0; python3 \"$f\"", "description": "Block unscoped searches, if the work hook is installed"},
+      {"command": "f=$HOME/.kiro/hooks/block-git-substitution.py; [ -f \"$f\" ] || exit 0; python3 \"$f\"", "description": "Block raw git where a wrapper exists, if the work hook is installed"}
+    ],
+    "postToolUse": [
+      {"command": "f=$HOME/.kiro/hooks/log-tool-use.py; [ -f \"$f\" ] || exit 0; python3 \"$f\"", "description": "Tool-call log, if the work hook is installed"}
+    ],
+    "stop": [
+      {"command": "$HOME/.kiro/hooks/bell-on-answer.sh", "description": "Ring the kitty bell when a turn ends"}
+    ]
+  },
+  "includeMcpJson": false
+}
