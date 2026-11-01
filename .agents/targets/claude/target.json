@@ -42,9 +42,9 @@
     },
     {
       "date": "2026-11-01",
-      "check": "symlinked subagent files in ~/.claude/agents are listed",
-      "result": "unverified",
-      "how": "docs say ~/.claude/agents is scanned recursively; confirm the 4 web agents appear in a fresh session"
+      "check": "symlinked subagent files in ~/.claude/agents are listed and run",
+      "result": "yes: all 4 load; ux-reviewer ran (other 3 only loaded)",
+      "how": "fresh sessions on bullens 2026-11-01: all 4 listed as launchable agent types with description and per-file tool limits, so the files were parsed through the symlinks. ux-reviewer then ran: read README.md, quoted its first heading, followed its role (verdicts + sitemap), changed nothing. Its declared Grep/Glob were absent only because that session offered no Grep/Glob tools at all; Claude drops declared tools the session lacks, not a fault in the files"
     }
   ]
 }
