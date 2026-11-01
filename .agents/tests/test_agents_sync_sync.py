@@ -182,6 +182,25 @@ class SyncTests(unittest.TestCase):
         self.assertIn("regenerate", [a["action"] for a in r["actions"]])
         self.assertIn("AGENTS.work.md", read(f"{self.c}/CLAUDE.md"))
 
+    def test_claude_agents_linked_from_sources_and_work_wins(self):
+        write(f"{self.p}/targets/claude/agents/reviewer.md", "---\nname: reviewer\ndescription: p\n---\n")
+        write(f"{self.w}/targets/claude/agents/reviewer.md", "---\nname: reviewer\ndescription: w\n---\n")
+        write(f"{self.p}/targets/claude/agents/notes.txt", "ignored")
+        rc, r = self.run_cmd("sync")
+        self.assertEqual(os.readlink(f"{self.c}/agents/reviewer.md"), f"{self.w}/targets/claude/agents/reviewer.md")
+        self.assertFalse(os.path.lexists(f"{self.c}/agents/notes.txt"))
+        self.assertIn("claude/agents/reviewer.md: work replaces personal", r["overrides"])
+
+    def test_hand_made_claude_agent_needs_adopt(self):
+        write(f"{self.p}/targets/claude/agents/reviewer.md", "---\nname: reviewer\ndescription: p\n---\n")
+        write(f"{self.c}/agents/reviewer.md", "my own\n")
+        rc, r = self.run_cmd("sync")
+        self.assertEqual(r["status"], "conflict")
+        rc, r = self.run_cmd("sync", "--adopt")
+        self.assertTrue(os.path.islink(f"{self.c}/agents/reviewer.md"))
+        self.run_cmd("unlink")
+        self.assertEqual(read(f"{self.c}/agents/reviewer.md"), "my own\n")
+
     # --- kiro --------------------------------------------------------
 
     def test_kiro_links_go_to_sources_and_work_wins(self):

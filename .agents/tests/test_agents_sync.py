@@ -145,6 +145,18 @@ class CheckTests(unittest.TestCase):
         rc, r = self.run_check()
         self.assertTrue(any("not the generated view" in w for w in r["warnings"]), r)
 
+    def test_spec_optional_fields_allowed(self):
+        skill(self.personal, "tech-doc", front="name: tech-doc\ndescription: x\nlicense: MIT\ncompatibility: any\n")
+        rc, r = self.run_check()
+        self.assertEqual(rc, 0, r)
+
+    def test_claude_agent_name_must_match_file(self):
+        d = os.path.join(self.personal, "targets", "claude", "agents")
+        os.makedirs(d)
+        write(os.path.join(d, "reviewer.md"), "---\nname: other\ndescription: x\n---\n")
+        rc, r = self.run_check()
+        self.assertTrue(any("does not match file name" in e for e in r["errors"]), r)
+
     def test_no_front_matter(self):
         d = os.path.join(self.personal, "skills", "tech-doc")
         os.makedirs(d)

@@ -39,7 +39,8 @@ Skills in `~/.agents/skills` are folder symlinks, so editing through them edits 
 │   │   ├── agents/*.json   #   Kiro custom agents (native format)
 │   │   └── hooks/*         #   Kiro hook scripts
 │   └── claude/
-│       └── target.json     #   Claude skill exclude list, with test evidence
+│       ├── target.json     #   Claude skill exclude list, with test evidence
+│       └── agents/*.md     #   Claude subagents (native format)
 ├── bin/agents-sync         # personal repo only: the merge + adapters, Python stdlib
 └── tests/                  # personal repo only
 ```
@@ -61,7 +62,7 @@ Both sources are read-only to `agents-sync`. It refuses to write anything that r
 
 | Tool | Instructions | Skills | Other |
 |---|---|---|---|
-| Claude Code | Generated `~/.claude/CLAUDE.md` stub: `@~/.agents/AGENTS.md` (+ `AGENTS.work.md`) | `~/.claude/skills/<name>` → `~/.agents/skills/<name>`, minus `targets/claude/target.json` excludes | Subagents, hooks, MCP: native, not managed yet |
+| Claude Code | Generated `~/.claude/CLAUDE.md` stub: `@~/.agents/AGENTS.md` (+ `AGENTS.work.md`) | `~/.claude/skills/<name>` → `~/.agents/skills/<name>`, minus `targets/claude/target.json` excludes | Subagents: `targets/claude/agents/*.md` linked into `~/.claude/agents/` (work wins per file). Hooks, MCP: native, not managed |
 | Kiro CLI | Custom agent resources `file://~/.agents/AGENTS.md`, `file://~/.agents/AGENTS.work.md` | One resource glob `skill://~/.agents/skills/*/SKILL.md` | `targets/kiro/{agents,hooks}/*` linked into `~/.kiro/`; MCP native |
 | Codex | (not set up) | Reads `~/.agents/skills` natively | |
 

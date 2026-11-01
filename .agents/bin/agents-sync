@@ -23,7 +23,8 @@ Generated (owned by agents-sync, recorded in ~/.local/state/agents-sync/manifest
           Same skill name in both sources: the work folder replaces the personal
           one as a whole, and the plan prints an override line.
   claude  ~/.claude/skills/<name> -> ~/.agents/skills/<name> (minus the
-          targets/claude/target.json exclude list) and a generated
+          targets/claude/target.json exclude list), targets/claude/agents/*.md ->
+          ~/.claude/agents/ (work wins per file name), and a generated
           ~/.claude/CLAUDE.md stub importing the view.
   kiro    targets/kiro/{agents,hooks}/* -> ~/.kiro/{agents,hooks}/, work wins per
           file name. targets/kiro/settings.json keys (e.g. chat.defaultAgent) are
@@ -40,6 +41,7 @@ check (read-only, exit 1 on any error):
   - top-level keys limited to name, description, metadata + ALLOWED_EXTRA
   - the same skill name in both sources: info, work wins
   - targets/kiro/agents/*.json and targets/claude/target.json parse as JSON
+  - targets/claude/agents/*.md start with front matter whose name matches the file
   - AGENTS.md: warning above 50 lines
   - leak check, personal source only: secret patterns always; work patterns from
     --leak-patterns or <work>/agents-sync/leak-patterns.txt.
@@ -52,7 +54,8 @@ import re
 import sys
 
 ALLOWED_EXTRA = {"type", "use_when", "version",       # round 3, R2
-                 "model", "model_notes"}             # documented valid in build-skills
+                 "model", "model_notes",             # documented valid in build-skills
+                 "license", "compatibility", "allowed-tools"}   # optional fields in the Agent Skills spec
 AGENTS_MD_WARN = 50
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 SKIP_DIRS = {".git", "__pycache__", "node_modules"}
@@ -228,6 +231,15 @@ def check(leak_file=None):
                     errors.append(f"{label}:targets/kiro/settings.json: not a JSON object")
             except ValueError as e:
                 errors.append(f"{label}:targets/kiro/settings.json: invalid JSON ({e})")
+        ca = os.path.join(root, "targets", "claude", "agents")
+        for f in sorted(os.listdir(ca)) if os.path.isdir(ca) else []:
+            if not f.endswith(".md"):
+                continue
+            fm, err = parse_front_matter(open(os.path.join(ca, f), encoding="utf-8", errors="replace").read())
+            if err:
+                errors.append(f"{label}:targets/claude/agents/{f}: {err}")
+            elif fm.get("name") != f[:-3]:
+                errors.append(f"{label}:targets/claude/agents/{f}: name '{fm.get('name')}' does not match file name")
         ct = os.path.join(root, "targets", "claude", "target.json")
         if os.path.isfile(ct):
             try:
@@ -383,6 +395,19 @@ def desired(targets=(), owned=()):
         for name, (_, label) in sorted(skills.items()):
             if name not in exclude:
                 add(os.path.join(claude, "skills", name), "link", os.path.join(view, "skills", name), label=label)
+        agents = {}
+        for label, root in sources():
+            d = os.path.join(root, "targets", "claude", "agents")
+            for f in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+                src = os.path.join(d, f)
+                if f.startswith(".") or not f.endswith(".md") or not os.path.isfile(src):
+                    continue
+                dest = os.path.join(claude, "agents", f)
+                if dest in agents:
+                    overrides.append(f"claude/agents/{f}: {label} replaces {agents[dest][1]}")
+                agents[dest] = (src, label)
+        for dest, (src, label) in sorted(agents.items()):
+            add(dest, "link", src, label=label)
         stub = (f"{STUB_MARK} Do not edit: change {tilde(proot)} (or the work repo) "
                 "and run `agents-sync sync`. -->\n" + "".join(f"@~/.agents/{f}\n" for f in instr))
         add(os.path.join(claude, "CLAUDE.md"), "file", content=stub)
