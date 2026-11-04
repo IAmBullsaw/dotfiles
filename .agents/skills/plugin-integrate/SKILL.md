@@ -66,11 +66,11 @@ Reverse-engineer a tool's plugin/extension API and build a working integration.
 
 **Execution context:**
 - ✅ Tested `sys.executable` inside kitty's boss process, discovered it resolves to the kitty binary. Used `"python3"` instead.
-- ❌ Assumed `sys.executable` would be python3 (it is everywhere else). Kitten timed out after 5 seconds trying to run redact.py with the kitty binary.
+- ❌ Assumed `sys.executable` would be python3 (it is everywhere else). Kitten timed out after 5 seconds trying to run a Python helper script with the kitty binary.
 
 **Skeleton first:**
-- ✅ Built a kitten that just pastes "hello". Confirmed: no overlay, loads correctly, `no_ui` attribute set. Then added xclip + redact logic.
-- ❌ Built the full kitten with clipboard access + redaction + error handling. It hung. No idea which part was wrong because everything was untested.
+- ✅ Built a kitten that just pastes "hello". Confirmed: no overlay, loads correctly, `no_ui` attribute set. Then added the xclip and text-processing logic.
+- ❌ Built the full kitten with clipboard access + text processing + error handling. It hung. No idea which part was wrong because everything was untested.
 
 **Path resolution:**
 - ✅ Checked where the tool resolves relative paths from (`kitty.constants.config_dir` = `~/.config/kitty/`). Symlinked accordingly.
