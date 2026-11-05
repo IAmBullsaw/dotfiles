@@ -48,7 +48,7 @@
     "preToolUse": [
       {
         "command": "f=$HOME/.kiro/hooks/block-broad-search.py; [ -f \"$f\" ] || exit 0; python3 \"$f\"",
-        "description": "Block unscoped find/rg/grep -r (GATE #2 - know the path, no broad searches)"
+        "description": "Block unscoped find/rg/grep -r (AGENTS.md: know the path, no broad searches)"
       }
     ]
   },

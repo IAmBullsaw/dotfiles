@@ -56,7 +56,8 @@ Moved from ~/.kiro/profile.md on 2026-10-26 (sections L61, L147, L245, L265, L28
   - forgejo.py: Forgejo CLI (issues, labels, CI logs) — actively used for personal projects on self-hosted Forgejo
 - Helpers: ~/dotfiles/helpers/
   - update.sh: auto-pull dotfiles repo if behind remote
-- Other: nvim config, kitty config, zellij layouts, theme
+- Other: nvim config, kitty config, zellij layouts (zellij is retired), theme
+  - kitty modal keyboard (kitty.conf, 2026-11): `ctrl+space` enters kitty_mode (red border) for splits, tabs and windows; from there `d` opens detach_mode (move the window to tab 1-4), `w` resize_mode (blue, OS window edge by edge, `resize_step.sh`), `m` move_mode (mauve: nudge, half and quarter screen, fullscreen, center, `window_place.sh`). `shift+v` opens an enumerated Vibbe tab (`launch_enumerated.sh`). escape always returns to normal (green); the help comment at the top of the modal block lists every key.
   - kitty/kittens/smart_nav.py: custom-written kitten for window navigation — moves to neighboring Kitty window, falls back to next/prev tab when at the edge. Used for alt+h/l navigation.
 
 ## Working style (merged from the Claude profile, 2026-10-29)
