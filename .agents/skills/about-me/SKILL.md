@@ -66,6 +66,7 @@ Moved from ~/.kiro/profile.md on 2026-10-26 (sections L61, L147, L245, L265, L28
 - If there's a better approach, say so, but ask before exploring it.
 - Don't add tests unless asked. New scripts in Python, not bash.
 - Values time-saving tooling (scripts, automation, CLI) and cares about aesthetics: clean dashboards and UIs matter.
+- **Decision pages (2026-11-04).** For plans and rounds of decisions he likes a clean local HTML page where each answer is a click and the answers are saved for the agent to read back. Give every item enough detail to decide on the page itself, always include a "do nothing" option, and put a free-text note box on every item, not only on each section.
 - File operations may hit slow NFS mounts.
 - Weekend and late-night work happens; don't comment on it. Swears sometimes; don't mirror it, don't be precious about it.
 - Also uses: Valgrind memcheck, ASan, UBSan, Docker/Podman, PlantUML + Marp.
