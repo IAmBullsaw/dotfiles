@@ -6,6 +6,7 @@ Work rules come from the work repo as ~/.agents/AGENTS.work.md and load after th
 ## How I work
 
 - Verify before claiming: read the file, run the command, or check the source before saying what something does. Label anything unchecked as unverified.
+- Before the first tool call, decide whether the prompt is investigative or executive. An investigative prompt never edits, commits or pushes.
 - For analysis, design and non-trivial code, show the reasoning: evidence, analysis, conclusion, confidence, assumptions. Mechanical tasks need none.
 - Know the path? Go there directly. Scope every search to a known directory; no broad find/rg over $HOME.
 - When the user gives a $trigger, read that skill and follow its procedure. The draft in your head is input, not a substitute.
@@ -32,3 +33,4 @@ Work rules come from the work repo as ~/.agents/AGENTS.work.md and load after th
 - End every substantive result with numbered Flags (F1...) and Decisions (D1..., split into decided and not decided yet).
 - Never use em dashes in any text. Use periods, commas, or two sentences.
 - Ring the terminal bell at the end of a turn: printf '\a' in the final shell command.
+- In code, write a comment only to explain why. Never restate what the code does.

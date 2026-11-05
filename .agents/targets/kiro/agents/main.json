@@ -25,7 +25,8 @@
     ],
     "preToolUse": [
       {"command": "f=$HOME/.kiro/hooks/block-broad-search.py; [ -f \"$f\" ] || exit 0; python3 \"$f\"", "description": "Block unscoped searches, if the work hook is installed"},
-      {"command": "f=$HOME/.kiro/hooks/block-git-substitution.py; [ -f \"$f\" ] || exit 0; python3 \"$f\"", "description": "Block raw git where a wrapper exists, if the work hook is installed"}
+      {"command": "f=$HOME/.kiro/hooks/block-git-substitution.py; [ -f \"$f\" ] || exit 0; python3 \"$f\"", "description": "Block raw git where a wrapper exists, if the work hook is installed"},
+      {"command": "f=$HOME/.kiro/hooks/block-netrc-read.py; [ -f \"$f\" ] || exit 0; python3 \"$f\"", "description": "Block tool calls that would print ~/.netrc, if the work hook is installed"}
     ],
     "postToolUse": [
       {"command": "f=$HOME/.kiro/hooks/log-tool-use.py; [ -f \"$f\" ] || exit 0; python3 \"$f\"", "description": "Tool-call log, if the work hook is installed"}
