@@ -55,7 +55,7 @@ Run the validator first. It catches wrong types but not unknown fields, and it e
 when it prints an error, so read its output instead of the exit code:
 
 ```bash
-for f in ~/.kiro/agents/*.json; do kiro-cli agent validate --path "$f"; done
+for f in ~/.kiro/agents/*.json; do echo "== $f"; kiro-cli agent validate --path "$f" 2>&1; done
 ```
 
 Any "Error:" line is a failure. For an agent that changed, also load it for real; this
