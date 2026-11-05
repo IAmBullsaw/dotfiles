@@ -51,14 +51,22 @@ inventing a procedure section.
 
 ### 2. Agent validation
 
-Run the official validator first, which authoritatively rejects unknown fields and reports
-the accepted field set in its error:
+Run the validator first. It catches wrong types but not unknown fields, and it exits 0 even
+when it prints an error, so read its output instead of the exit code:
 
 ```bash
 for f in ~/.kiro/agents/*.json; do kiro-cli agent validate --path "$f"; done
 ```
 
-Silence means valid. Then check the conventions the validator does not cover:
+Any "Error:" line is a failure. For an agent that changed, also load it for real; this
+catches what validate misses (it does not start MCP servers, so MCP changes still need a TUI
+launch):
+
+```bash
+kiro-cli chat --agent "<name>" --no-interactive "Reply PONG"   # stderr must not say "not found" or "invalid"
+```
+
+Then check the conventions the validator does not cover:
 - `model` field is not null (pinned)
 - Every path in `resources` array resolves (glob skill:// patterns, check file:// paths exist)
 - If `allowedTools` includes write-capable tools, `toolsSettings.write.allowedPaths` exists
