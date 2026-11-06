@@ -24,6 +24,8 @@ Moved from ~/.kiro/profile.md on 2026-10-26 (sections L61, L147, L245, L265, L28
 - Prefers ripgrep (rg) over grep
 - Downloads RPMs directly when repo setup is fiddly
 - Likes things version-controlled (~/Code/janos -> ~/.kiro symlink)
+- Uses git stash regularly, but open to switching to WIP commits plus push
+- Advent of Code: takes part once a year (has an aocurl helper script)
 
 ## AI Techniques
 - Playbook: `~/.agents/skills/playbook/SKILL.md` — tracks techniques, when to use them, effectiveness ratings
