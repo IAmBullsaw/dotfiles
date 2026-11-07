@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REPLACE: report title</title>
+<!-- Mermaid gets vendored inline here by the skill workflow (Step 4). -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #161923;
+    --panel-2: #1c2030;
+    --border: #2a2f42;
+    --text: #e3e6f0;
+    --muted: #8b92ab;
+    --accent: #7dd3fc;
+    --accent2: #a78bfa;
+    --accent3: #4ade80;
+    --accent4: #fb923c;
+    --accent5: #f472b6;
+    --mono: "JetBrains Mono", "Fira Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: radial-gradient(1200px 800px at 10% -10%, #1a2036 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: "Segoe UI", Inter, system-ui, sans-serif;
+    line-height: 1.5;
+  }
+  header { padding: 48px 6vw 28px; border-bottom: 1px solid var(--border); }
+  header h1 { margin: 0 0 8px; font-size: 2.1rem; letter-spacing: -0.02em; }
+  header h1 .accent { color: var(--accent); }
+  header p.sub { color: var(--muted); margin: 0; font-size: 1.05rem; max-width: 70ch; }
+  .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .badge {
+    font-family: var(--mono); font-size: 0.78rem; padding: 4px 10px;
+    border-radius: 999px; border: 1px solid var(--border); background: var(--panel); color: var(--muted);
+  }
+  nav.toc {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(15,17,21,0.92); backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--border); padding: 10px 6vw;
+    display: flex; gap: 18px; flex-wrap: wrap; font-size: 0.85rem;
+  }
+  nav.toc a { color: var(--muted); text-decoration: none; padding: 4px 2px; border-bottom: 2px solid transparent; }
+  nav.toc a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+  main { padding: 10px 6vw 90px; max-width: 1500px; margin: 0 auto; }
+  section { margin-top: 56px; scroll-margin-top: 60px; }
+  section h2 { font-size: 1.5rem; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; }
+  section h2 .num {
+    font-family: var(--mono); color: var(--accent); font-size: 0.9rem;
+    border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px;
+  }
+  section > p.lead { color: var(--muted); max-width: 85ch; margin: 6px 0 22px; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 22px; margin-bottom: 22px; overflow-x: auto;
+  }
+  .panel.tight { padding: 14px 22px; }
+  .grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 22px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 980px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+  .mermaid { text-align: center; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--accent); font-weight: 600; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  td.mono, th.mono { font-family: var(--mono); font-size: 0.85rem; }
+  .pill {
+    display: inline-block; font-family: var(--mono); font-size: 0.72rem; padding: 2px 8px;
+    border-radius: 999px; color: #0f1115; font-weight: 600;
+  }
+  .pill.on { background: var(--accent3); }
+  .pill.off { background: #475569; color: #cbd5e1; }
+  .pill.wip { background: var(--accent4); }
+  .card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .card h3 { margin: 0 0 6px; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+  .card p { margin: 4px 0; color: var(--muted); font-size: 0.9rem; }
+  .card .k { color: var(--text); font-family: var(--mono); font-size: 0.8rem; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 0.85rem; color: var(--muted); margin-top: 10px; }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  footer { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 30px 0 60px; }
+  code { font-family: var(--mono); background: #11141c; padding: 1px 6px; border-radius: 4px; color: #fca5a5; font-size: 0.85em; }
+  .quote {
+    border-left: 3px solid var(--accent2); padding: 10px 16px; color: var(--muted);
+    font-style: italic; background: var(--panel-2); border-radius: 0 8px 8px 0;
+  }
+  .svg-wrap { display: flex; justify-content: center; }
+</style>
+<!-- Paste the <style id="report-toolbar-style"> block from references/report-header.html here. -->
+</head>
+<body>
+
+<!-- Paste the <div id="report-toolbar">...</div> block from references/report-header.html here, as the very first thing in <body>. -->
+
+<header>
+  <h1><span class="accent">&#9671;</span> REPLACE: report title</h1>
+  <p class="sub">REPLACE: one-paragraph summary of what this is and why it's being shared.</p>
+  <div class="badges">
+    <!-- REPLACE: one badge per key tech/tool detected -->
+    <span class="badge">tech-tag</span>
+  </div>
+</header>
+
+<main>
+
+  <section id="section-1" class="report-section" data-section-title="Section title">
+    <h2><span class="num">01</span> Section title</h2>
+    <p class="lead">What this diagram shows and why it matters.</p>
+    <div class="panel">
+      <div class="mermaid">
+graph LR
+  classDef roleA fill:#1c2030,stroke:#7dd3fc,stroke-width:2px,color:#e3e6f0;
+  classDef roleB fill:#1c2030,stroke:#4ade80,stroke-width:2px,color:#e3e6f0;
+
+  ROOT["Root node"]
+  ROOT --> nodeA["Node A<br/><i>role description</i>"]
+  ROOT --> nodeB["Node B<br/><i>role description</i>"]
+
+  class nodeA roleA;
+  class nodeB roleB;
+      </div>
+      <div class="legend">
+        <span><span class="dot" style="background:#7dd3fc"></span> Role A</span>
+        <span><span class="dot" style="background:#4ade80"></span> Role B</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Example: hand-drawn inline SVG for a linear/branching flow Mermaid doesn't render well -->
+  <section id="section-svg-example" class="report-section" data-section-title="Linear flow">
+    <h2><span class="num">02</span> Linear flow (inline SVG example)</h2>
+    <p class="lead">Use this pattern for flows that aren't naturally graph-shaped.</p>
+    <div class="panel">
+      <div class="svg-wrap">
+<svg width="820" height="200" viewBox="0 0 820 200" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6" fill="#7dd3fc"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill:#1c2030; stroke:#2a2f42; stroke-width:1.5; rx:10; }
+    .lbl { fill:#e3e6f0; font-size:13px; }
+    .sub { fill:#8b92ab; font-size:11px; }
+    .edge { stroke:#7dd3fc; stroke-width:1.6; fill:none; marker-end:url(#arrow); }
+  </style>
+  <rect class="box" x="20" y="30" width="190" height="60"/>
+  <text class="lbl" x="35" y="55">Step 1</text>
+  <text class="sub" x="35" y="74">detail line</text>
+  <rect class="box" x="300" y="30" width="190" height="60"/>
+  <text class="lbl" x="315" y="55">Step 2</text>
+  <path class="edge" d="M210,60 C260,60 260,60 300,60"/>
+</svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- Example: feature matrix table -->
+  <section id="matrix-example" class="report-section" data-section-title="Feature matrix">
+    <h2><span class="num">03</span> Feature matrix (table example)</h2>
+    <div class="panel tight">
+      <table>
+        <tr><th>Item</th><th class="mono">flag A</th><th class="mono">flag B</th></tr>
+        <tr><td>Row 1</td><td><span class="pill on">on</span></td><td><span class="pill off">&mdash;</span></td></tr>
+        <tr><td>Row 2</td><td><span class="pill wip">partial / TODO</span></td><td><span class="pill on">on</span></td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- Closing "rough edges" section: REPLACE with real, verbatim quotes from TODOs/journal files -->
+  <section id="notes" class="report-section" data-section-title="Notes from the field">
+    <h2><span class="num">04</span> Notes from the field</h2>
+    <p class="lead">What stood out as real/lived-in rather than polished.</p>
+    <div class="quote">REPLACE: a real verbatim quote from a TODO, journal entry, or comment in the source material.</div>
+  </section>
+
+</main>
+
+<footer>
+  Generated from a read-only walkthrough of REPLACE: source path &middot; no files modified
+</footer>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: "dark",
+    themeVariables: {
+      darkMode: true,
+      background: "#161923",
+      primaryColor: "#1c2030",
+      primaryTextColor: "#e3e6f0",
+      primaryBorderColor: "#7dd3fc",
+      lineColor: "#8b92ab",
+      secondaryColor: "#1c2030",
+      tertiaryColor: "#1c2030",
+      fontFamily: "Segoe UI, Inter, system-ui, sans-serif"
+    },
+    flowchart: { curve: "basis", htmlLabels: true }
+  });
+</script>
+
+<!-- Paste the <script id="report-toolbar-script">...</script> block from references/report-header.html here. -->
+
+</body>
+</html>

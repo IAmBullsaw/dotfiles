@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REPLACE: conversation title</title>
+<!-- marked.js gets vendored inline here by the skill workflow (SKILL.md Step 2). -->
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<style>
+  :root {
+    --bg: #15151a;
+    --bg-soft: #1b1b22;
+    --border: #2a2a33;
+    --text: #e4e2e6;
+    --muted: #8d8a96;
+    --user-bubble: #2b2733;
+    --user-bubble-border: #3d3748;
+    --user-text: #ddd6e8;
+    --assistant-bubble: #1e2328;
+    --assistant-bubble-border: #2c343b;
+    --assistant-text: #d8dee2;
+    --accent: #8a8fb8;
+    --mono: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    --font: "Segoe UI", Inter, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    line-height: 1.55;
+  }
+  header {
+    padding: 36px 6vw 20px;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+  }
+  header h1 {
+    margin: 0 0 6px;
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  header p.sub {
+    color: var(--muted);
+    margin: 0;
+    font-size: 0.92rem;
+  }
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 28px 5vw 80px;
+  }
+  .turn {
+    display: flex;
+    margin-bottom: 18px;
+  }
+  .turn.user { justify-content: flex-end; }
+  .turn.assistant { justify-content: flex-start; }
+  .bubble {
+    max-width: 82%;
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 0.95rem;
+  }
+  .turn.user .bubble {
+    background: var(--user-bubble);
+    border: 1px solid var(--user-bubble-border);
+    color: var(--user-text);
+    border-bottom-right-radius: 4px;
+  }
+  .turn.assistant .bubble {
+    background: var(--assistant-bubble);
+    border: 1px solid var(--assistant-bubble-border);
+    color: var(--assistant-text);
+    border-bottom-left-radius: 4px;
+  }
+  .bubble .role-label {
+    font-size: 0.7rem;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin-bottom: 6px;
+    opacity: 0.75;
+  }
+  .bubble p { margin: 0.4em 0; }
+  .bubble p:first-of-type { margin-top: 0; }
+  .bubble p:last-of-type { margin-bottom: 0; }
+  .bubble ul, .bubble ol { margin: 0.4em 0; padding-left: 1.3em; }
+  .bubble code {
+    font-family: var(--mono);
+    background: rgba(255,255,255,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.88em;
+  }
+  .bubble pre {
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    margin: 0.5em 0;
+  }
+  .bubble pre code {
+    background: none;
+    padding: 0;
+    font-size: 0.85em;
+    white-space: pre;
+  }
+  .bubble a { color: var(--accent); text-decoration: underline; text-decoration-color: rgba(138,143,184,0.4); }
+  .bubble table { border-collapse: collapse; margin: 0.5em 0; font-size: 0.88em; }
+  .bubble th, .bubble td { border: 1px solid rgba(255,255,255,0.08); padding: 4px 8px; }
+  .timestamp {
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 5px;
+    font-family: var(--mono);
+  }
+  .turn.user .timestamp { text-align: right; }
+  .tool-block {
+    margin-top: 8px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    background: rgba(0,0,0,0.18);
+  }
+  .tool-block summary {
+    cursor: pointer;
+    padding: 6px 10px;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+    list-style: none;
+  }
+  .tool-block summary::-webkit-details-marker { display: none; }
+  .tool-block summary::before { content: "🔧 "; }
+  .tool-block pre {
+    margin: 0;
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    border-radius: 0 0 8px 8px;
+    font-size: 0.78rem;
+    max-height: 300px;
+  }
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.78rem;
+    padding: 20px 0 40px;
+  }
+
+  /* --- Theme engine --- */
+  .theme-toggle {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 200;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 999px;
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .theme-toggle:hover { border-color: var(--accent); }
+  .theme-panel {
+    position: fixed;
+    top: 56px;
+    right: 14px;
+    z-index: 200;
+    width: 260px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 0.85rem;
+    display: none;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+  }
+  .theme-panel.open { display: block; }
+  .theme-panel h3 {
+    margin: 0 0 10px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .theme-panel .preset-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .theme-panel .preset-swatch {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    padding: 0;
+  }
+  .theme-panel .preset-swatch.active { border-color: var(--accent); }
+  .theme-panel .upload-row {
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+    margin-top: 4px;
+  }
+  .theme-panel label.upload-btn {
+    display: block;
+    text-align: center;
+    padding: 6px 10px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.8rem;
+  }
+  .theme-panel label.upload-btn:hover { border-color: var(--accent); color: var(--text); }
+  .theme-panel input[type="file"] { display: none; }
+  .theme-panel .reset-btn {
+    width: 100%;
+    margin-top: 8px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 5px;
+    cursor: pointer;
+    font-size: 0.78rem;
+  }
+  .theme-panel .reset-btn:hover { color: var(--text); border-color: var(--accent); }
+  .theme-panel .upload-error {
+    color: #e08a8a;
+    font-size: 0.75rem;
+    margin-top: 6px;
+    display: none;
+  }
+</style>
+<!-- Paste the <style id="report-toolbar-style"> block from repo-visual-report/references/report-header.html here, before </head>. -->
+</head>
+<body>
+
+<!-- Paste the <div id="report-toolbar">...</div> block from repo-visual-report/references/report-header.html here, as the very first thing in <body>. -->
+
+<button class="theme-toggle" id="theme-toggle-btn" title="Theme">🎨</button>
+<div class="theme-panel" id="theme-panel">
+  <h3>Presets</h3>
+  <div class="preset-row" id="theme-preset-row"></div>
+  <div class="upload-row">
+    <label class="upload-btn">
+      Upload theme .json
+      <input type="file" id="theme-upload-input" accept="application/json,.json">
+    </label>
+    <div class="upload-error" id="theme-upload-error"></div>
+    <button class="reset-btn" id="theme-reset-btn">Reset to default</button>
+  </div>
+</div>
+
+<header>
+  <h1>REPLACE: conversation title</h1>
+  <p class="sub">REPLACE: one-line context — who/what/when</p>
+</header>
+
+<main id="chat-container"></main>
+
+<footer>
+  Shared conversation transcript &middot; rendered locally, no network access required
+</footer>
+
+<!-- REPLACE the empty array below with the real transcript JSON from `/transcript --json`.
+     Format: array of {role, content} objects (role is "user" or "assistant").
+     Paste verbatim, do not transform or truncate. -->
+<script type="application/json" id="chat-data">
+[]
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  var data = JSON.parse(document.getElementById("chat-data").textContent || "[]");
+  var container = document.getElementById("chat-container");
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  // Render a single message's content. Content may be a plain string, or
+  // (depending on export format) an array of blocks with type "text" /
+  // "tool_use" / "tool_result". Handle both shapes defensively.
+  function renderContent(content) {
+    if (typeof content === "string") {
+      return renderMarkdown(content);
+    }
+    if (Array.isArray(content)) {
+      return content.map(renderBlock).join("");
+    }
+    if (content && typeof content === "object") {
+      return renderBlock(content);
+    }
+    return "";
+  }
+
+  function renderBlock(block) {
+    if (typeof block === "string") return renderMarkdown(block);
+    var type = block.type || "text";
+    if (type === "text" && typeof block.text === "string") {
+      return renderMarkdown(block.text);
+    }
+    if (type === "tool_use" || type === "tool_call") {
+      var name = block.name || block.tool_name || "tool call";
+      var input = block.input || block.arguments || block.parameters || {};
+      return toolDisclosure(name, JSON.stringify(input, null, 2));
+    }
+    if (type === "tool_result" || type === "tool_response") {
+      var out = block.content || block.output || block.result || "";
+      var text = typeof out === "string" ? out : JSON.stringify(out, null, 2);
+      return toolDisclosure("tool result", text);
+    }
+    // Unknown block shape: fall back to pretty-printed JSON so nothing is silently dropped.
+    return toolDisclosure(type, JSON.stringify(block, null, 2));
+  }
+
+  function toolDisclosure(label, bodyText) {
+    return '<details class="tool-block"><summary>' + escapeHtml(label) + '</summary>' +
+      '<pre><code>' + escapeHtml(bodyText) + '</code></pre></details>';
+  }
+
+  function renderMarkdown(text) {
+    if (typeof marked !== "undefined") {
+      try {
+        return marked.parse(text, { breaks: true });
+      } catch (e) {
+        return "<p>" + escapeHtml(text).replace(/\n/g, "<br>") + "</p>";
+      }
+    }
+    return "<p>" + escapeHtml(text).replace(/\n/g, "<br>") + "</p>";
+  }
+
+  data.forEach(function (msg) {
+    var role = (msg.role || "assistant").toLowerCase();
+    var turnClass = role === "user" ? "user" : "assistant";
+
+    var turn = document.createElement("div");
+    turn.className = "turn " + turnClass;
+
+    var bubble = document.createElement("div");
+    bubble.className = "bubble";
+
+    var label = document.createElement("div");
+    label.className = "role-label";
+    label.textContent = turnClass === "user" ? "You" : "Assistant";
+    bubble.appendChild(label);
+
+    var body = document.createElement("div");
+    body.innerHTML = renderContent(msg.content);
+    bubble.appendChild(body);
+
+    if (msg.timestamp || msg.created_at || msg.time) {
+      var ts = document.createElement("div");
+      ts.className = "timestamp";
+      ts.textContent = msg.timestamp || msg.created_at || msg.time;
+      bubble.appendChild(ts);
+    }
+
+    turn.appendChild(bubble);
+    container.appendChild(turn);
+  });
+})();
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  // Theme engine: applies a flat {cssVarName: value} map onto :root.
+  // Vars match the --xxx custom properties declared in <style> above.
+  // A "theme JSON" uploaded by a reader is just that same flat map,
+  // e.g. { "bg": "#101014", "accent": "#c9a876", "font": "Georgia, serif" }
+  // (the leading "--" is optional in the uploaded file; added if missing).
+
+  var THEME_VARS = [
+    "bg", "bg-soft", "border", "text", "muted",
+    "user-bubble", "user-bubble-border", "user-text",
+    "assistant-bubble", "assistant-bubble-border", "assistant-text",
+    "accent", "mono", "font"
+  ];
+
+  var PRESETS = {
+    "Mellow dark (default)": {
+      bg: "#15151a", "bg-soft": "#1b1b22", border: "#2a2a33",
+      text: "#e4e2e6", muted: "#8d8a96",
+      "user-bubble": "#2b2733", "user-bubble-border": "#3d3748", "user-text": "#ddd6e8",
+      "assistant-bubble": "#1e2328", "assistant-bubble-border": "#2c343b", "assistant-text": "#d8dee2",
+      accent: "#8a8fb8"
+    },
+    "Warm paper (light)": {
+      bg: "#f6f1e9", "bg-soft": "#efe8db", border: "#ddd3bf",
+      text: "#2e2a24", muted: "#8a7f6c",
+      "user-bubble": "#ece0c8", "user-bubble-border": "#d9c7a0", "user-text": "#352c1c",
+      "assistant-bubble": "#ffffff", "assistant-bubble-border": "#e2dccb", "assistant-text": "#2e2a24",
+      accent: "#a8763e"
+    },
+    "Forest quiet": {
+      bg: "#121714", "bg-soft": "#17201b", border: "#263129",
+      text: "#dce8e0", muted: "#7d9488",
+      "user-bubble": "#1f2e24", "user-bubble-border": "#2c4233", "user-text": "#cfe8d7",
+      "assistant-bubble": "#182320", "assistant-bubble-border": "#243530", "assistant-text": "#d4e0da",
+      accent: "#6fae8a"
+    },
+    "Slate blue": {
+      bg: "#11151c", "bg-soft": "#161b24", border: "#242d3a",
+      text: "#dde3ec", muted: "#7c8798",
+      "user-bubble": "#1b2634", "user-bubble-border": "#2a3c4f", "user-text": "#cfe0f0",
+      "assistant-bubble": "#151c26", "assistant-bubble-border": "#222e3b", "assistant-text": "#d6dee8",
+      accent: "#6f94c4"
+    }
+  };
+
+  var STORAGE_KEY = "chat-to-html-theme:" + location.pathname;
+  var root = document.documentElement;
+  var panel = document.getElementById("theme-panel");
+  var toggleBtn = document.getElementById("theme-toggle-btn");
+  var presetRow = document.getElementById("theme-preset-row");
+  var uploadInput = document.getElementById("theme-upload-input");
+  var uploadError = document.getElementById("theme-upload-error");
+  var resetBtn = document.getElementById("theme-reset-btn");
+
+  function applyTheme(vars) {
+    THEME_VARS.forEach(function (name) {
+      if (vars[name] !== undefined) {
+        root.style.setProperty("--" + name, vars[name]);
+      }
+    });
+  }
+
+  function clearTheme() {
+    THEME_VARS.forEach(function (name) {
+      root.style.removeProperty("--" + name);
+    });
+  }
+
+  function swatchPreview(vars) {
+    return (vars.bg || "#000") + " 0%, " + (vars["user-bubble"] || vars.bg || "#000") + " 50%, " +
+      (vars.accent || vars.bg || "#000") + " 100%";
+  }
+
+  function buildPresetSwatches() {
+    presetRow.innerHTML = "";
+    Object.keys(PRESETS).forEach(function (name) {
+      var vars = PRESETS[name];
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "preset-swatch";
+      btn.title = name;
+      btn.style.background = "linear-gradient(135deg, " + swatchPreview(vars) + ")";
+      btn.addEventListener("click", function () {
+        clearTheme();
+        applyTheme(vars);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(vars));
+        markActiveSwatch(btn);
+      });
+      presetRow.appendChild(btn);
+    });
+  }
+
+  function markActiveSwatch(activeBtn) {
+    Array.prototype.forEach.call(presetRow.children, function (el) {
+      el.classList.toggle("active", el === activeBtn);
+    });
+  }
+
+  function normalizeUploadedVars(raw) {
+    var out = {};
+    Object.keys(raw).forEach(function (key) {
+      var clean = key.replace(/^--/, "");
+      if (THEME_VARS.indexOf(clean) !== -1 && typeof raw[key] === "string") {
+        out[clean] = raw[key];
+      }
+    });
+    return out;
+  }
+
+  uploadInput.addEventListener("change", function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    uploadError.style.display = "none";
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var raw = JSON.parse(reader.result);
+        var vars = normalizeUploadedVars(raw);
+        if (!Object.keys(vars).length) {
+          throw new Error("no recognized theme keys found");
+        }
+        clearTheme();
+        applyTheme(vars);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(vars));
+        markActiveSwatch(null);
+      } catch (err) {
+        uploadError.textContent = "Couldn't apply theme: " + err.message;
+        uploadError.style.display = "block";
+      }
+    };
+    reader.onerror = function () {
+      uploadError.textContent = "Couldn't read that file.";
+      uploadError.style.display = "block";
+    };
+    reader.readAsText(file);
+    uploadInput.value = "";
+  });
+
+  resetBtn.addEventListener("click", function () {
+    clearTheme();
+    localStorage.removeItem(STORAGE_KEY);
+    markActiveSwatch(null);
+  });
+
+  toggleBtn.addEventListener("click", function () {
+    panel.classList.toggle("open");
+  });
+  document.addEventListener("click", function (e) {
+    if (panel.classList.contains("open") && !panel.contains(e.target) && e.target !== toggleBtn) {
+      panel.classList.remove("open");
+    }
+  });
+
+  buildPresetSwatches();
+
+  // Restore persisted theme on load, if any.
+  var saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      applyTheme(JSON.parse(saved));
+    } catch (e) {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }
+})();
+</script>
+
+<!-- Paste the <script id="report-toolbar-script">...</script> block from repo-visual-report/references/report-header.html here, right before </body>. -->
+
+</body>
+</html>

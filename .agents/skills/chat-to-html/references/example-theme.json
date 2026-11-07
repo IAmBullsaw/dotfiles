@@ -1,0 +1,16 @@
+{
+  "_comment": "Example theme for chat-to-html. Unknown keys like this one are ignored safely. Use the Upload button in the chat page's theme panel to apply this file.",
+  "bg": "#0e1116",
+  "bg-soft": "#141821",
+  "border": "#232a35",
+  "text": "#e2e6ea",
+  "muted": "#808a98",
+  "user-bubble": "#1c2838",
+  "user-bubble-border": "#2a3c52",
+  "user-text": "#d6e4f2",
+  "assistant-bubble": "#171c22",
+  "assistant-bubble-border": "#232c34",
+  "assistant-text": "#dbe1e6",
+  "accent": "#5e9bd6",
+  "font": "Inter, \"Segoe UI\", sans-serif"
+}

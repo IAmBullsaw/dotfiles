@@ -1,0 +1,345 @@
+<!--
+  report-header.html — shared collapsible header / fuzzy-search / per-section
+  feedback snippet for repo-visual-report HTML outputs.
+
+  USAGE: paste the <style> block into the report's <head>, paste the
+  <div id="report-toolbar">...</div> markup right after <body>, paste the
+  <script> block right before </body>, and add class="report-section"
+  data-section-title="..." to every <section> you want searchable and
+  annotatable (see template.html for the full pattern).
+
+  Depends on: report-server.py running and serving the report (GET /index.json,
+  POST /feedback). If opened as a bare file:// with no server running, the
+  search box and feedback forms degrade gracefully (search shows a notice,
+  feedback submit shows an inline error) rather than throwing.
+-->
+
+<style id="report-toolbar-style">
+  #report-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(15,17,21,0.96);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border, #2a2f42);
+    transition: max-height 0.15s ease, padding 0.15s ease;
+    overflow: hidden;
+    max-height: 56px;
+    padding: 10px 6vw;
+  }
+  #report-toolbar.collapsed {
+    max-height: 0;
+    padding: 0 6vw;
+    border-bottom-color: transparent;
+  }
+  #report-toolbar .toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  #report-toolbar input[type="search"] {
+    flex: 1;
+    max-width: 480px;
+    background: var(--panel-2, #1c2030);
+    border: 1px solid var(--border, #2a2f42);
+    border-radius: 8px;
+    color: var(--text, #e3e6f0);
+    padding: 7px 12px;
+    font-family: inherit;
+    font-size: 0.88rem;
+  }
+  #report-toolbar input[type="search"]:focus {
+    outline: 1px solid var(--accent, #7dd3fc);
+  }
+  #report-toolbar .hint {
+    color: var(--muted, #8b92ab);
+    font-size: 0.78rem;
+    font-family: var(--mono, monospace);
+    white-space: nowrap;
+  }
+  #report-search-results {
+    position: absolute;
+    top: 100%;
+    left: 6vw;
+    right: 6vw;
+    max-width: 480px;
+    background: var(--panel, #161923);
+    border: 1px solid var(--border, #2a2f42);
+    border-radius: 10px;
+    margin-top: 6px;
+    max-height: 360px;
+    overflow-y: auto;
+    display: none;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  }
+  #report-search-results.open { display: block; }
+  #report-search-results a {
+    display: block;
+    padding: 9px 14px;
+    color: var(--text, #e3e6f0);
+    text-decoration: none;
+    font-size: 0.86rem;
+    border-bottom: 1px solid var(--border, #2a2f42);
+  }
+  #report-search-results a:last-child { border-bottom: none; }
+  #report-search-results a:hover, #report-search-results a.active {
+    background: var(--panel-2, #1c2030);
+  }
+  #report-search-results .r-file {
+    color: var(--accent, #7dd3fc);
+    font-family: var(--mono, monospace);
+    font-size: 0.72rem;
+    display: block;
+    margin-top: 2px;
+  }
+  #report-search-results .r-empty {
+    padding: 14px;
+    color: var(--muted, #8b92ab);
+    font-size: 0.85rem;
+  }
+
+  /* Per-section feedback affordance */
+  .report-section { position: relative; }
+  .report-section .feedback-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: none;
+    border: 1px solid var(--border, #2a2f42);
+    color: var(--muted, #8b92ab);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .report-section:hover .feedback-toggle,
+  .report-section .feedback-toggle.active {
+    opacity: 1;
+  }
+  .report-section .feedback-toggle:hover {
+    color: var(--accent, #7dd3fc);
+    border-color: var(--accent, #7dd3fc);
+  }
+  .report-section .feedback-form {
+    display: none;
+    margin: 10px 0 0;
+    gap: 8px;
+    align-items: center;
+  }
+  .report-section .feedback-form.open { display: flex; }
+  .report-section .feedback-form input[type="text"] {
+    flex: 1;
+    background: var(--panel-2, #1c2030);
+    border: 1px solid var(--accent2, #a78bfa);
+    border-radius: 8px;
+    color: var(--text, #e3e6f0);
+    padding: 7px 12px;
+    font-family: inherit;
+    font-size: 0.86rem;
+  }
+  .report-section .feedback-status {
+    font-size: 0.78rem;
+    font-family: var(--mono, monospace);
+    color: var(--muted, #8b92ab);
+    white-space: nowrap;
+  }
+  .report-section .feedback-status.ok { color: var(--accent3, #4ade80); }
+  .report-section .feedback-status.err { color: var(--accent5, #f472b6); }
+</style>
+
+<div id="report-toolbar">
+  <div class="toolbar-row">
+    <input type="search" id="report-search-input" placeholder="Search all reports...  (Ctrl+K)" autocomplete="off">
+    <span class="hint">Ctrl+K search &middot; Ctrl+/ toggle bar &middot; hover a section + click &#9998; to leave feedback</span>
+  </div>
+  <div id="report-search-results"></div>
+</div>
+
+<script id="report-toolbar-script">
+(function () {
+  "use strict";
+
+  var THIS_FILE = location.pathname.split("/").pop() || "";
+  var toolbar = document.getElementById("report-toolbar");
+  var searchInput = document.getElementById("report-search-input");
+  var resultsBox = document.getElementById("report-search-results");
+  var manifest = null;
+  var activeIndex = -1;
+
+  // ---------- collapsible toolbar ----------
+  function toggleToolbar() {
+    toolbar.classList.toggle("collapsed");
+  }
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "/" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      toggleToolbar();
+    }
+    if (e.key === "k" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      toolbar.classList.remove("collapsed");
+      searchInput.focus();
+      searchInput.select();
+    }
+    if (e.key === "Escape") {
+      resultsBox.classList.remove("open");
+      searchInput.blur();
+    }
+  });
+
+  // ---------- fuzzy search across all reports ----------
+  function fuzzyScore(needle, haystack) {
+    needle = needle.toLowerCase();
+    haystack = haystack.toLowerCase();
+    if (!needle) return 0;
+    if (haystack.indexOf(needle) !== -1) return 100 - haystack.indexOf(needle);
+    // simple subsequence fuzzy match
+    var ni = 0, score = 0;
+    for (var hi = 0; hi < haystack.length && ni < needle.length; hi++) {
+      if (haystack[hi] === needle[ni]) { score++; ni++; }
+    }
+    return ni === needle.length ? score : -1;
+  }
+
+  function loadManifest() {
+    if (manifest) return Promise.resolve(manifest);
+    return fetch("/index.json").then(function (r) {
+      if (!r.ok) throw new Error("manifest fetch failed: " + r.status);
+      return r.json();
+    }).then(function (data) {
+      manifest = data;
+      return data;
+    });
+  }
+
+  function renderResults(query) {
+    if (!manifest) { resultsBox.innerHTML = '<div class="r-empty">Loading…</div>'; return; }
+    var hits = [];
+    manifest.forEach(function (entry) {
+      var titleScore = fuzzyScore(query, entry.title || "");
+      if (titleScore >= 0) hits.push({ file: entry.file, label: entry.title, sub: "report title", score: titleScore + 50 });
+      (entry.sections || []).forEach(function (s) {
+        var score = fuzzyScore(query, s);
+        if (score >= 0) hits.push({ file: entry.file, label: s, sub: entry.title, score: score });
+      });
+    });
+    hits.sort(function (a, b) { return b.score - a.score; });
+    hits = hits.slice(0, 20);
+
+    if (!hits.length) {
+      resultsBox.innerHTML = '<div class="r-empty">No matches' + (query ? ' for "' + escapeHtml(query) + '"' : "") + '</div>';
+      activeIndex = -1;
+      return;
+    }
+    resultsBox.innerHTML = hits.map(function (h, i) {
+      var href = h.file === THIS_FILE ? "#" : h.file;
+      return '<a href="' + encodeURI(href) + '" data-idx="' + i + '">' +
+        escapeHtml(h.label) +
+        '<span class="r-file">' + escapeHtml(h.file) + (h.sub ? " — " + escapeHtml(h.sub) : "") + '</span>' +
+        '</a>';
+    }).join("");
+    activeIndex = -1;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  searchInput.addEventListener("focus", function () {
+    resultsBox.classList.add("open");
+    loadManifest().then(function () { renderResults(searchInput.value); })
+      .catch(function (err) {
+        resultsBox.innerHTML = '<div class="r-empty">Search needs report-server.py running (' + escapeHtml(err.message) + ')</div>';
+      });
+  });
+  searchInput.addEventListener("input", function () {
+    renderResults(searchInput.value);
+  });
+  searchInput.addEventListener("keydown", function (e) {
+    var links = resultsBox.querySelectorAll("a");
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      activeIndex = Math.min(activeIndex + 1, links.length - 1);
+      links.forEach(function (l, i) { l.classList.toggle("active", i === activeIndex); });
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      activeIndex = Math.max(activeIndex - 1, 0);
+      links.forEach(function (l, i) { l.classList.toggle("active", i === activeIndex); });
+    } else if (e.key === "Enter") {
+      if (activeIndex >= 0 && links[activeIndex]) {
+        e.preventDefault();
+        links[activeIndex].click();
+      }
+    }
+  });
+  document.addEventListener("click", function (e) {
+    if (!resultsBox.contains(e.target) && e.target !== searchInput) {
+      resultsBox.classList.remove("open");
+    }
+  });
+
+  // ---------- per-section feedback ----------
+  function initSectionFeedback() {
+    document.querySelectorAll(".report-section").forEach(function (section) {
+      var title = section.getAttribute("data-section-title") || "";
+
+      var toggleBtn = document.createElement("button");
+      toggleBtn.className = "feedback-toggle";
+      toggleBtn.type = "button";
+      toggleBtn.title = "Leave feedback on this section";
+      toggleBtn.textContent = "\u270E";
+
+      var form = document.createElement("form");
+      form.className = "feedback-form";
+      form.innerHTML =
+        '<input type="text" placeholder="What should change in this section? (Enter to send)" autocomplete="off">' +
+        '<span class="feedback-status"></span>';
+
+      section.insertBefore(toggleBtn, section.firstChild);
+      section.appendChild(form);
+
+      var input = form.querySelector("input");
+      var status = form.querySelector(".feedback-status");
+
+      toggleBtn.addEventListener("click", function () {
+        var isOpen = form.classList.toggle("open");
+        toggleBtn.classList.toggle("active", isOpen);
+        if (isOpen) input.focus();
+      });
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var text = input.value.trim();
+        if (!text) return;
+        status.textContent = "sending…";
+        status.className = "feedback-status";
+        fetch("/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ file: THIS_FILE, section: title, text: text }),
+        }).then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.json();
+        }).then(function (data) {
+          status.textContent = "queued (" + data.job_id + ")";
+          status.className = "feedback-status ok";
+          input.value = "";
+        }).catch(function (err) {
+          status.textContent = "failed: " + err.message + " (is report-server.py running?)";
+          status.className = "feedback-status err";
+        });
+      });
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initSectionFeedback);
+  } else {
+    initSectionFeedback();
+  }
+})();
+</script>
