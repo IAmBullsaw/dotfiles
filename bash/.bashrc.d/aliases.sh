@@ -64,6 +64,7 @@ alias constants='cat "$BASHRC_D/config.sh"'
 alias clear='clear && clear'
 alias language='setxkbmap -layout se'
 alias zj="zellij attach -c"
+alias tm='tmux new-session -A -s'
 
 # --- Homelab ---------------------------------------------------------------
 alias mount-rpi5='sshfs -v dietpi@192.168.88.9:/home/dietpi /home/bullen/projects/homelab/rpi5'
