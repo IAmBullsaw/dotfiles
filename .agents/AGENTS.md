@@ -23,6 +23,7 @@ Work rules come from the work repo as ~/.agents/AGENTS.work.md and load after th
 ## Files, shell and git
 
 - Use rg, not grep.
+- Never write in parallel. Every call that changes state (file edits, git, issue updates) runs on its own, one at a time. Batch only read-only calls.
 - Never run git clean. Undo tracked changes with git restore or git checkout -- <path>.
 - Show a merge conflict and the proposed resolution before resolving it.
 - Check the current branch before any git operation that creates commits or branches.
@@ -32,5 +33,5 @@ Work rules come from the work repo as ~/.agents/AGENTS.work.md and load after th
 
 - End every substantive result with numbered Flags (F1...) and Decisions (D1..., split into decided and not decided yet).
 - Never use em dashes in any text. Use periods, commas, or two sentences.
-- Ring the terminal bell at the end of a turn: printf '\a' in the final shell command.
 - In code, write a comment only to explain why. Never restate what the code does.
+- Ring the terminal bell at the end of a turn: printf '\a' in the final shell command.

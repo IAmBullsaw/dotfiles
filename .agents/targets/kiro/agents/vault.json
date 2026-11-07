@@ -41,6 +41,12 @@
         "command": "f=$HOME/.kiro/hooks/prompt-intent.py; [ -f \"$f\" ] || exit 0; python3 \"$f\"",
         "description": "Log user prompt as intent event"
       }
+    ],
+    "preToolUse": [
+      {
+        "command": "f=$HOME/.kiro/hooks/work-tracker-guard.py; [ -f \"$f\" ] || exit 0; python3 \"$f\"",
+        "description": "Work-repo tracker guard, if installed"
+      }
     ]
   },
   "toolAliases": {},

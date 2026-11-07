@@ -47,6 +47,10 @@
     ],
     "preToolUse": [
       {
+        "command": "f=$HOME/.kiro/hooks/work-tracker-guard.py; [ -f \"$f\" ] || exit 0; python3 \"$f\"",
+        "description": "Work-repo tracker guard, if installed"
+      },
+      {
         "command": "f=$HOME/.kiro/hooks/block-broad-search.py; [ -f \"$f\" ] || exit 0; python3 \"$f\"",
         "description": "Block unscoped find/rg/grep -r (AGENTS.md: know the path, no broad searches)"
       }
