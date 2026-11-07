@@ -1,6 +1,7 @@
 return {
   {
     'DrKJeff16/project.nvim',
+    commit = '7893b61e82a1b92be91d417a7ad572cb99a98386', -- pinned: write_history recursion bug not fixed upstream
     config = function()
       require('project').setup {
         detection_methods = { "pattern", "lsp" },

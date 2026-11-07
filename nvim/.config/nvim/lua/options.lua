@@ -26,3 +26,12 @@ vim.o.inccommand = 'split'
 vim.o.cursorline = true
 vim.o.scrolloff = 10
 vim.o.confirm = true
+vim.o.modeline = true
+vim.o.modelines = 5
+vim.o.modelineexpr = true
+
+-- Load TODO.md ftplugin for the personal task file
+vim.api.nvim_create_autocmd({ 'BufRead', 'BufNewFile' }, {
+  pattern = 'TODO.md',
+  callback = function() vim.bo.filetype = 'todo_md' end,
+})

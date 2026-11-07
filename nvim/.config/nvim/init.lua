@@ -1,5 +1,6 @@
 require('options')
 require('keymaps')
+pcall(require, 'work')
 
 -- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
@@ -9,7 +10,7 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
-require('lazy').setup({ import = 'plugins' }, {
+require('lazy').setup({ { import = 'plugins' }, { import = 'plugins.ui' } }, {
   ui = {
     icons = vim.g.have_nerd_font and {} or {
       cmd = '⌘', config = '🛠', event = '📅', ft = '📂',
