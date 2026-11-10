@@ -30,7 +30,7 @@ Why: both git and the API used to share one HTTPS app token in the machine-wide 
 ## Service credentials
 
 - Before API work, require a non-empty `.git/forgejo/token-claude` belonging to the claude account, with the access the task needs (repository read, issues read/write). Never read or print a token.
-- If it is missing, empty or rejected: stop and ask the user to provision it in the Forgejo UI. Never fall back to `token-bullen`, the shared credential store (`git credential fill`, which `forgejo.py` still has as a legacy fallback), an unverified `FORGEJO_TOKEN`, or human credentials to mint a service token.
+- If it is missing, empty or rejected: stop and ask the user to provision it in the Forgejo UI. Never fall back to `token-bullen`, the shared credential store (`git credential fill`; `forgejo.py` keeps it as a legacy fallback for the bullen identity only and exits for any other identity), an unverified `FORGEJO_TOKEN`, or human credentials to mint a service token.
 - A working SSH key doesn't give API access, and an API token doesn't give git access. Keep them separate.
 - `.git/forgejo/token-*` live inside `.git/`, untracked, and never leave the machine.
 

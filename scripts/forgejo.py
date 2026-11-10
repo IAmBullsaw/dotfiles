@@ -46,12 +46,16 @@ def _resolve_token(host):
     # git-credential-store entry per host, which any process touching that
     # host can silently overwrite for every other process using it.
     identity = os.environ.get("FORGEJO_IDENTITY", "bullen")
-    token_file = os.path.join(_repo_root(), ".git", "forgejo", f"token-{identity}")
+    token_file = os.path.join(_git_common_dir(), "forgejo", f"token-{identity}")
     if os.path.isfile(token_file):
         with open(token_file) as f:
             token = f.read().strip()
         if token:
             return token
+    # Only the human identity may use the legacy shared credential store.
+    # A service identity silently borrowing it would act as someone else.
+    if identity != "bullen":
+        sys.exit(f"No token for FORGEJO_IDENTITY={identity}: {token_file} is missing or empty")
     return _git_credential_token(host)
 
 
@@ -76,6 +80,16 @@ def _repo_root():
         capture_output=True, text=True,
     )
     return proc.stdout.strip() or "."
+
+
+def _git_common_dir():
+    # The main .git directory. In a worktree, <toplevel>/.git is a file, so
+    # the token files must be found here rather than under _repo_root().
+    proc = subprocess.run(
+        ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+        capture_output=True, text=True,
+    )
+    return proc.stdout.strip() or ".git"
 
 
 class Forge:
